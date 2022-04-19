@@ -77,6 +77,6 @@ fig = go.Figure(data=[go.Sankey(
       color = color_link
   ))])
 
-fig.update_layout(title_text="Basic Sankey Diagram", font_size=10)
+fig.update_layout(title_text="Sankey Diagram", font_size=10)
 
 st.plotly_chart(fig, use_container_width=True)
