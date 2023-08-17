@@ -1,3 +1,5 @@
-retentioneering
+numpy
+pandas
 plotly
-openpyxl
+mysql-connector-python
+streamlit
