@@ -50,7 +50,8 @@ if host!='' and user!='' and password!='':
     except Exception as e:
         st.warning(e)
         st.stop()
-
+else:
+    st.stop()
 
 # 5. Trial Users: users who try features without registered
 @st.cache_data
