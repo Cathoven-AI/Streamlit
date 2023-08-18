@@ -55,16 +55,12 @@ else:
 
 # 5. Trial Users: users who try features without registered
 @st.cache_data
-def trial_users(dates, period=7):
-    dates = pd.to_datetime(dates)
+def trial_users(dates):
     counts = []
     for date in dates:
-        count = 0
-        for _,g in df2[(df2['requested_at'].dt.normalize()>=date-pd.Timedelta(days=period-1))&(df2['requested_at'].dt.normalize()<=date)&(df2['path']!='/')].groupby('remote_addr'):
-            #if len(set(g['username_persistent'].values)-set(['Anonymous']))==0:
-            if 'Anonymous' in set(g['username_persistent'].values):
-                count += 1
-        counts.append(count)
+        date = pd.to_datetime(np.array(date))
+        trial_user_ids = set(df2[(df2['username_persistent']=='Anonymous')&(df2['requested_at'].dt.normalize()>=date[0])&(df2['requested_at'].dt.normalize()<=date[1])&(df2['path']!='/')]['remote_addr'].values)
+        counts.append(len(trial_user_ids))
     return np.array(counts)
 
 @st.cache_data
@@ -92,93 +88,87 @@ def subscription_users(dates):
 def active_users(dates, among=None):
     df2_temp = df2[df2['username_persistent']!='Anonymous'].copy()
     df2_temp['requested_at'] = df2_temp['requested_at'].dt.normalize()
-    df2_temp = df2_temp[df2_temp['requested_at']>=pd.to_datetime(dates[0][0])-pd.Timedelta(days=31)]
+    #df2_temp = df2_temp[df2_temp['requested_at']>=pd.to_datetime(dates[0][0])-pd.Timedelta(days=31)]
     df2_temp = df2_temp.drop_duplicates(['user_id','requested_at'])
-    df2_temp['requested_at'] = df2_temp['requested_at'].apply(lambda x:x.strftime('%Y-%m-%d'))
-    if among is not None:
-        df2_temp = df2_temp[df2_temp['user_id'].apply(lambda x: x in among)]
+    #df2_temp['requested_at'] = df2_temp['requested_at'].apply(lambda x:x.strftime('%Y-%m-%d'))
+    #if among is not None:
+    #    df2_temp = df2_temp[df2_temp['user_id'].apply(lambda x: x in among)]
 
     counts = []
     for date in dates:
         date = pd.to_datetime(np.array(date))
-        count = 0
-        date_range = set([x.strftime('%Y-%m-%d') for x in pd.date_range(start=date[0], end=date[1], freq='D')])
-        for _,g in df2_temp.groupby('user_id'):
-            if len(date_range.intersection(set(g['requested_at'].values)))>0:
-                count += 1
-        counts.append(count)
+        active_user_ids = set(df2_temp[(df2_temp['requested_at']>=date[0])&(df2_temp['requested_at']<=date[1])]['user_id'].values)
+        if among is not None:
+            active_user_ids = active_user_ids.intersection(among)
+        # count = 0
+        # date_range = set([x.strftime('%Y-%m-%d') for x in pd.date_range(start=date[0], end=date[1], freq='D')])
+        # for _,g in df2_temp.groupby('user_id'):
+        #     if len(date_range.intersection(set(g['requested_at'].values)))>0:
+        #         count += 1
+        # counts.append(count)
+        counts.append(len(active_user_ids))
+
     return np.array(counts)
 
 
-# 9. Reactivated Users: users who log in whose previous login was 7-29 days before
-# 10. Returning users: users who log in whose previous login was more than 29 days before
-# 11. Active users_7d that might lost: users who fail to log in whose previous login was 1-6 days before
-# 12. Active users_30d that migh lost: users who fail to log in whose previous login was 1-29 days before
-# 13. Lost users: users who haven't logged in since more than 30 days ago
 @st.cache_data
-def miscellaneous_users(dates):
+def rurr(dates):
     df2_temp = df2[df2['username_persistent']!='Anonymous'].copy()
     df2_temp['requested_at'] = df2_temp['requested_at'].dt.normalize()
-    df2_temp = df2_temp[df2_temp['requested_at']>=pd.to_datetime(dates[0][0])-pd.Timedelta(days=31)]
+    #df2_temp = df2_temp[df2_temp['requested_at']>=pd.to_datetime(dates[0][0])-pd.Timedelta(days=31)]
     df2_temp = df2_temp.drop_duplicates(['user_id','requested_at'])
-
-    reactivated_user_counts = []
-    returning_user_counts = []
-    active_user_7d_counts = []
-    active_user_30d_counts = []
-    lost_user_counts = []
-    retained_user_7d_counts = []
     
+    rurrs = []
     for date in dates:
         date = pd.to_datetime(np.array(date))
+        freq = (date[1]-date[0]).days+1
 
-        reactivated_user_count = 0
-        returning_user_count = 0
-        active_user_7d_count = 0
-        active_user_30d_count = 0
-        lost_user_count = 0
-        retained_user_7d_count = 0
-
-
+        reactive_user_count = 0
+        return_reactive_user_count = 0
         for _,g in df2_temp.groupby('user_id'):
-            for i in range(1):
-                g['diff'] = (date[0]-g['requested_at']).dt.days-i
-                diff = set(g['diff'])
-                if 0 in diff:
-                    if len(set(range(1,7)).intersection(diff))==0:
-                        if len(set(range(7,30)).intersection(diff))>0:
-                            reactivated_user_count += 1
-                            break
-                        elif max(diff)>29:
-                            returning_user_count += 1
-                            break
-                    #if 7 in diff:
-                    #    retained_user_7d_count += 1
-                else:
-                    #if len(set(range(1,30)).intersection(diff))>0:
-                    #    active_user_30d_count += 1
-                    #    if len(set(range(1,7)).intersection(diff))>0:
-                    #        active_user_7d_count += 1
-                    #else:
-                    #    lost_user_count += 1
-                    if len(set(range(1,30)).intersection(diff))==0:
-                        lost_user_count += 1
-                        break
+            if len(g[(g['requested_at']>=date[0]-pd.Timedelta(days=freq))&(g['requested_at']<=date[1]-pd.Timedelta(days=freq))])==0:
+                continue
+            if len(g[(g['requested_at']>=date[0]-pd.Timedelta(days=freq*2))&(g['requested_at']<=date[1]-pd.Timedelta(days=freq*2))])>0:
+                continue
+            if len(g[g['requested_at']<date[1]-pd.Timedelta(days=freq*2)])==0:
+                continue
+            reactive_user_count += 1
+            if len(g[(g['requested_at']>=date[0])&(g['requested_at']<=date[1])])>0:
+                return_reactive_user_count += 1
+        if reactive_user_count==0:
+            rurrs.append(0)
+        else:
+            rurrs.append(return_reactive_user_count/reactive_user_count)
+    return np.array(rurrs)
 
-        reactivated_user_counts.append(reactivated_user_count)
-        returning_user_counts.append(returning_user_count)
-        #active_user_7d_counts.append(active_user_7d_count)
-        #active_user_30d_counts.append(active_user_30d_count)
-        lost_user_counts.append(lost_user_count)
-        #retained_user_7d_counts.append(retained_user_7d_count)
-    return {'reactivated_users':reactivated_user_counts,
-            'returning_users':returning_user_counts,
-            #'active_users_7d':active_user_7d_counts,
-            #'active_users_30d':active_user_30d_counts,
-            'lost_users':lost_user_counts
-            #'retained_users_7d':retained_user_7d_counts
-            }
+@st.cache_data
+def get_reactive_users(dates):
+    df2_temp = df2[df2['username_persistent']!='Anonymous'].copy()
+    df2_temp['requested_at'] = df2_temp['requested_at'].dt.normalize()
+    #df2_temp = df2_temp[df2_temp['requested_at']>=pd.to_datetime(dates[0][0])-pd.Timedelta(days=31)]
+    df2_temp = df2_temp.drop_duplicates(['user_id','requested_at'])
+    
+    reactive_users = []
+    for date in dates:
+        date = pd.to_datetime(np.array(date))
+        freq = (date[1]-date[0]).days+1
 
+        active_this_period = set(df2_temp[(df2_temp['requested_at']>=date[0])&(df2_temp['requested_at']<=date[1])]['user_id'].values)
+        active_previous_period = set(df2_temp[((df2_temp['requested_at']>=date[0]-pd.Timedelta(days=freq))&(df2_temp['requested_at']<=date[1]-pd.Timedelta(days=freq)))]['user_id'].values)
+        active_before_previous_period = set(df2_temp[df2_temp['requested_at']<date[0]-pd.Timedelta(days=freq)]['user_id'].values)
+
+        # user_ids = []
+        # for user_id,g in df2_temp.groupby('user_id'):
+        #     if len(g[(g['requested_at']>=date[0])&(g['requested_at']<=date[1])])==0:
+        #         continue
+        #     if len(g[(g['requested_at']>=date[0]-pd.Timedelta(days=freq))&(g['requested_at']<=date[1]-pd.Timedelta(days=freq))])>0:
+        #         continue
+        #     if len(g[g['requested_at']<date[1]-pd.Timedelta(days=freq)])==0:
+        #         continue
+        #     user_ids.append(user_id)
+        #reactive_users.append(user_ids)
+        reactive_users.append(set((active_this_period-active_previous_period).intersection(active_before_previous_period)))
+    return reactive_users
 
 
 @st.cache_data
@@ -249,7 +239,7 @@ date_range_start, date_range_end, date_range_str = get_dates(nu_from,nu_to,nu_fr
 new_user_counts = new_users(date_range_str)
 if nu_freq=='Weekly average':
     date_range_start, date_range_end, date_range_str = get_dates(nu_from,nu_to,'Weekly')
-    new_user_counts = np.round(new_users(date_range_str)/7,1)
+    new_user_counts = np.round(new_users(date_range_str)/7,2)
 else:
     date_range_start, date_range_end, date_range_str = get_dates(nu_from,nu_to,nu_freq)
     new_user_counts = new_users(date_range_str)
@@ -405,22 +395,23 @@ curr_to = curr_col2.date_input(label="To",value=default_to,key='curr_to')
 date_range_start, date_range_end, date_range_str = get_dates(curr_from,curr_to,curr_freq)
 
 data = []
+raw_numbers = []
 for i in range(len(date_range_str)):
     date = pd.to_datetime(np.array(date_range_str[i]))
     current_user_ids = set(df2[(df2['username_persistent']!='Anonymous')&(df2['requested_at'].dt.normalize()>=date[0])&(df2['requested_at'].dt.normalize()<=date[1])]['user_id'])
-    #l = np.array([len(current_user_ids)]+list(active_users(date_range_str[i+1:],current_user_ids)))
+    raw_numbers.append(len(current_user_ids))
     l = np.array(active_users(date_range_str[i:],current_user_ids))
-    l = list(np.round(l/len(current_user_ids),3))
+    l = list(np.round(l/len(current_user_ids),4)*100)
     data.append(l+[np.nan]*(len(date_range_str)-len(l)))
 #data.append([1]+[np.nan]*(len(date_range_str)-1))
 data = np.array(data)
 
 if curr_freq=='Weekly' or curr_freq=='Bi-weekly':
-    y = [x[0].strftime('%b %d')+"-"+x[1].strftime('%b %d') for x in zip(date_range_start,date_range_end)]
+    y = [x[0].strftime('%b %d')+"-"+x[1].strftime('%b %d') + f'        {raw_numbers[i]}'  for i,x in enumerate(zip(date_range_start,date_range_end))]
 else:
-    y = [x.strftime('%Y %b') for x in date_range_end]
+    y = [x.strftime('%Y %b') + f'        {raw_numbers[i]}'  for i,x in enumerate(date_range_end)]
 fig = px.imshow(data,
-                labels=dict(x="Period", y="Date", color="Retention Rate"),
+                labels=dict(x="Period", y="Date", color="Retention Rate (%)"),
                 y=y,
                 color_continuous_scale='rdylgn'
                )
@@ -430,10 +421,10 @@ annotations = []
 for i in range(len(date_range_str)):
     for j in range(len(date_range_str)):
         if not np.isnan(data[i, j]):
-            if 0.6>data[i, j]>0.3:
-                annotations.append(dict(x=j, y=i, text=f"{data[i, j]*100:.1f}%", showarrow=False, font=dict(color="black")))
+            if 70>data[i, j]>30:
+                annotations.append(dict(x=j, y=i, text=f"{data[i, j]:.1f}%", showarrow=False, font=dict(color="black")))
             else:
-                annotations.append(dict(x=j, y=i, text=f"{data[i, j]*100:.1f}%", showarrow=False, font=dict(color="white")))
+                annotations.append(dict(x=j, y=i, text=f"{data[i, j]:.1f}%", showarrow=False, font=dict(color="white")))
 
 fig.update_layout(annotations=annotations)
 
@@ -452,19 +443,21 @@ nurr_to = nurr_col2.date_input(label="To",value=default_to,key='nurr_to')
 date_range_start, date_range_end, date_range_str = get_dates(nurr_from,nurr_to,nurr_freq)
 
 data = []
+raw_numbers = []
 for i in range(len(date_range_str)):
     date = pd.to_datetime(np.array(date_range_str[i]))
     new_user_ids = df1[(df1['date_joined'].dt.normalize()>=date[0])&(df1['date_joined'].dt.normalize()<=date[1])]['id']
-    l = list(np.round(active_users(date_range_str[i:],new_user_ids)/len(new_user_ids),3))
+    raw_numbers.append(len(new_user_ids))
+    l = list(np.round(active_users(date_range_str[i:],new_user_ids)/len(new_user_ids),4)*100)
     data.append(l+[np.nan]*(len(date_range_str)-len(l)))
 data = np.array(data)
 
 if nurr_freq=='Weekly' or nurr_freq=='Bi-weekly':
-    y = [x[0].strftime('%b %d')+"-"+x[1].strftime('%b %d') for x in zip(date_range_start,date_range_end)]
+    y = [x[0].strftime('%b %d')+"-"+x[1].strftime('%b %d') + f'        {raw_numbers[i]}'  for i,x in enumerate(zip(date_range_start,date_range_end))]
 else:
-    y = [x.strftime('%Y %b') for x in date_range_end]
+    y = [x.strftime('%Y %b') + f'        {raw_numbers[i]}'  for i,x in enumerate(date_range_end)]
 fig = px.imshow(data,
-                labels=dict(x="Period", y="Date", color="Retention Rate"),
+                labels=dict(x="Period", y="Date", color="Retention Rate (%)"),
                 y=y,
                 color_continuous_scale='rdylgn'
                )
@@ -475,13 +468,82 @@ annotations = []
 for i in range(len(date_range_str)):
     for j in range(len(date_range_str)):
         if not np.isnan(data[i, j]):
-            if 0.6>data[i, j]>0.3:
-                annotations.append(dict(x=j, y=i, text=f"{data[i, j]*100:.1f}%", showarrow=False, font=dict(color="black")))
+            if 70>data[i, j]>30:
+                annotations.append(dict(x=j, y=i, text=f"{data[i, j]:.1f}%", showarrow=False, font=dict(color="black")))
             else:
-                annotations.append(dict(x=j, y=i, text=f"{data[i, j]*100:.1f}%", showarrow=False, font=dict(color="white")))
+                annotations.append(dict(x=j, y=i, text=f"{data[i, j]:.1f}%", showarrow=False, font=dict(color="white")))
 
 fig.update_layout(annotations=annotations)
 
 nurr_expander.plotly_chart(fig, use_container_width=True)
 
 
+
+
+# rurr_expander = st.expander("RURR")
+# rurr_expander.write("reactive user retention rate")
+# rurr_col1, rurr_col2, rurr_col3 = rurr_expander.columns(3)
+# rurr_freq = rurr_col3.selectbox('Frequency',('Weekly', 'Bi-weekly', 'Monthly'), key='rurr_freq')
+# rurr_from = rurr_col1.date_input(label="From",value=default_from,key='rurr_from')
+# rurr_to = rurr_col2.date_input(label="To",value=default_to,key='rurr_to')
+# rurr_yrange = stickiness_expander.slider("Y-axis range", value=(0, 100), min_value=0, max_value=100, step=5, key='rurr_yrange')
+
+# date_range_start, date_range_end, date_range_str = get_dates(rurr_from,rurr_to,rurr_freq)
+
+# temp = pd.DataFrame({'rurr':np.round(rurr(date_range_str)*100,2)})
+
+# if rurr_freq=='Weekly':
+#     temp['date'] = [x[0].strftime('%b %d')+"-"+x[1].strftime('%b %d') for x in zip(date_range_start,date_range_end)]
+#     fig = px.line(temp, x="date", y='rurr', labels={'date':'Week', 'rurr':'RURR (%)'},markers=True)
+# elif rurr_freq=='Bi-weekly':
+#     temp['date'] = [x[0].strftime('%b %d')+"-"+x[1].strftime('%b %d') for x in zip(date_range_start,date_range_end)]
+#     fig = px.line(temp, x="date", y='rurr', labels={'date':'Bi-week', 'rurr':'RURR (%)'},markers=True)
+# elif rurr_freq=='Monthly':
+#     temp['date'] = [x.strftime('%Y %b') for x in date_range_end]
+#     fig = px.line(temp, x="date", y='rurr', labels={'date':'Month', 'rurr':'RURR (%)'},markers=True)
+
+# fig.update_yaxes(range=stickiness_yrange)
+
+# rurr_expander.plotly_chart(fig, use_container_width=True)
+
+
+rurr_expander = st.expander("RURR")
+rurr_expander.write("Reactive user retention rate")
+rurr_col1, rurr_col2, rurr_col3 = rurr_expander.columns(3)
+rurr_freq = rurr_col3.selectbox('Frequency',('Weekly', 'Bi-weekly', 'Monthly'), key='rurr_freq')
+rurr_from = rurr_col1.date_input(label="From",value=default_from,key='rurr_from')
+rurr_to = rurr_col2.date_input(label="To",value=default_to,key='rurr_to')
+date_range_start, date_range_end, date_range_str = get_dates(rurr_from,rurr_to,rurr_freq)
+
+reactive_user_ids = get_reactive_users(date_range_str)
+
+data = []
+for i in range(len(date_range_str)):
+    active_user_counts = active_users(date_range_str[i:],reactive_user_ids[i])
+    l = list(np.round(active_user_counts/len(reactive_user_ids[i]),4)*100)
+    data.append(l+[np.nan]*(len(date_range_str)-len(l)))
+data = np.array(data)
+
+if rurr_freq=='Weekly' or rurr_freq=='Bi-weekly':
+    y = [x[0].strftime('%b %d')+"-"+x[1].strftime('%b %d') + f'        {len(reactive_user_ids[i])}' for i, x in enumerate(zip(date_range_start,date_range_end))]
+else:
+    y = [x.strftime('%Y %b') + f'        {len(reactive_user_ids[i])}' for i, x in enumerate(date_range_end)]
+fig = px.imshow(data,
+                labels=dict(x="Period", y="Date", color="Retention Rate (%)"),
+                y=y,
+                color_continuous_scale='rdylgn'
+               )
+fig.update_xaxes(side="top")
+
+annotations = []
+for i in range(len(date_range_str)):
+    for j in range(len(date_range_str)):
+        if not np.isnan(data[i, j]):
+            if 70>data[i, j]>30:
+                annotations.append(dict(x=j, y=i, text=f"{data[i, j]:.1f}%", showarrow=False, font=dict(color="black")))
+            else:
+                annotations.append(dict(x=j, y=i, text=f"{data[i, j]:.1f}%", showarrow=False, font=dict(color="white")))
+
+fig.update_layout(annotations=annotations)
+
+rurr_expander.plotly_chart(fig, use_container_width=True)
