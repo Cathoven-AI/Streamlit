@@ -242,11 +242,17 @@ nu_expander.write("New Users")
 nu_col1, nu_col2, nu_col3 = nu_expander.columns(3)
 nu_from = nu_col1.date_input(label="From",value=default_from,key='nu_from')
 nu_to = nu_col2.date_input(label="To",value=default_to,key='nu_to')
-nu_freq = nu_col3.selectbox('Frequency',('Daily', 'Weekly', 'Bi-weekly', 'Monthly'),index=1,key='nu_freq')
-nu_yrange = nu_expander.slider("Y-axis range", value=(0, 500), min_value=0, max_value=2000, step=100, key='nu_yrange')
+nu_freq = nu_col3.selectbox('Frequency',('Daily', 'Weekly', 'Weekly average', 'Bi-weekly', 'Monthly'),index=2,key='nu_freq')
+nu_yrange = nu_expander.slider("Y-axis range", value=(0, 200), min_value=0, max_value=2000, step=50, key='nu_yrange')
 
 date_range_start, date_range_end, date_range_str = get_dates(nu_from,nu_to,nu_freq)
 new_user_counts = new_users(date_range_str)
+if nu_freq=='Weekly average':
+    date_range_start, date_range_end, date_range_str = get_dates(nu_from,nu_to,'Weekly')
+    new_user_counts = np.round(new_users(date_range_str)/7,1)
+else:
+    date_range_start, date_range_end, date_range_str = get_dates(nu_from,nu_to,nu_freq)
+    new_user_counts = new_users(date_range_str)
 
 temp = pd.DataFrame({'nu':new_user_counts})
 if nu_freq=='Daily':
@@ -255,6 +261,9 @@ if nu_freq=='Daily':
 elif nu_freq=='Weekly':
     temp['date'] = [x[0].strftime('%b %d')+"-"+x[1].strftime('%b %d') for x in zip(date_range_start,date_range_end)]
     fig = px.line(temp, x="date", y='nu', labels={'date':'Week', 'nu':'WNU'},markers=True)
+elif nu_freq=='Weekly average':
+    temp['date'] = [x[0].strftime('%b %d')+"-"+x[1].strftime('%b %d') for x in zip(date_range_start,date_range_end)]
+    fig = px.line(temp, x="date", y='nu', labels={'date':'Week', 'nu':'DNU (Weekly Average)'},markers=True)
 elif nu_freq=='Bi-weekly':
     temp['date'] = [x[0].strftime('%b %d')+"-"+x[1].strftime('%b %d') for x in zip(date_range_start,date_range_end)]
     fig = px.line(temp, x="date", y='nu', labels={'date':'Bi-week', 'nu':'2WNU'},markers=True)
@@ -263,6 +272,7 @@ elif nu_freq=='Monthly':
     fig = px.line(temp, x="date", y='nu', labels={'date':'Month', 'nu':'MNU'},markers=True)
 fig.update_yaxes(range=nu_yrange)
 nu_expander.plotly_chart(fig, use_container_width=True)
+
 
 
 
@@ -295,33 +305,34 @@ er_expander.plotly_chart(fig, use_container_width=True)
 
 
 
-# nurr_expander = st.expander("NURR")
-# nurr_expander.write("How many active users are new users (New users / Active users).")
-# nurr_col1, nurr_col2, nurr_col3 = nurr_expander.columns(3)
-# nurr_from = nurr_col1.date_input(label="From",value=default_from,key='nurr_from')
-# nurr_to = nurr_col2.date_input(label="To",value=default_to,key='nurr_to')
-# nurr_freq = nurr_col3.selectbox('Frequency',('Daily', 'Weekly', 'Bi-weekly', 'Monthly'),index=1,key='nurr_freq')
-# nurr_yrange = nurr_expander.slider("Y-axis range", value=(0, 100), min_value=0, max_value=200, step=5, key='nurr_yrange')
 
-# if nurr_from is not None and au_to is not None:
-#     date_range_start, date_range_end, date_range_str = get_dates(nurr_from,nurr_to,nurr_freq)
-#     active_user_counts = active_users(date_range_str)
-#     temp = pd.DataFrame({'NURR':new_users(date_range_str)/active_user_counts*100})
-#     if nurr_freq=='Daily':
-#         temp['date'] = [x.strftime('%b-%d %a') for x in date_range_end]
-#         fig = px.line(temp, x="date", y='NURR', labels={'date':'Day','NURR':"%"})
-#     elif nurr_freq=='Weekly':
-#         temp['date'] = [x[0].strftime('%b %d')+"-"+x[1].strftime('%b %d') for x in zip(date_range_start,date_range_end)]
-#         fig = px.line(temp, x="date", y='NURR', labels={'date':'Week','NURR':"%"},markers=True)
-#     elif nurr_freq=='Bi-weekly':
-#         temp['date'] = [x[0].strftime('%b %d')+"-"+x[1].strftime('%b %d') for x in zip(date_range_start,date_range_end)]
-#         fig = px.line(temp, x="date", y='NURR', labels={'date':'Bi-week','NURR':"%"},markers=True)
-#     elif nurr_freq=='Monthly':
-#         temp['date'] = [x.strftime('%Y %b') for x in date_range_end]
-#         fig = px.line(temp, x="date", y='NURR', labels={'date':'Month','NURR':"%"},markers=True)
+stickiness_expander = st.expander("Stickiness")
+stickiness_expander.write("DAU/MAU or WAU/MAU")
+stickiness_col1, stickiness_col2, stickiness_col3 = stickiness_expander.columns(3)
+stickiness_from = stickiness_col1.date_input(label="From",value=default_from,key='stickiness_from')
+stickiness_to = stickiness_col2.date_input(label="To",value=default_to,key='stickiness_to')
+stickiness_freq = stickiness_col3.selectbox('Frequency',('Daily', 'Weekly'),index=1,key='stickiness_freq')
+stickiness_yrange = stickiness_expander.slider("Y-axis range", value=(0, 100), min_value=0, max_value=100, step=5, key='stickiness_yrange')
 
-#     fig.update_yaxes(range=nurr_yrange)
-#     nurr_expander.plotly_chart(fig, use_container_width=True)
+date_range_start, date_range_end, date_range_str = get_dates(stickiness_from,stickiness_to,stickiness_freq)
+month_range_start = [end-pd.Timedelta(days=29) for end in date_range_end]
+month_range_start_str = np.array([x.strftime('%Y-%m-%d') for x in month_range_start])
+month_range_end_str = np.array([x.strftime('%Y-%m-%d') for x in date_range_end])
+month_range_str = np.array(list(zip(month_range_start_str,month_range_end_str)))
+mau = active_users(month_range_str)
+au = active_users(date_range_str)
+stickiness = au/mau*100
+temp = pd.DataFrame({'stickiness':stickiness})
+
+if stickiness_freq=='Daily':
+    temp['date'] = [x.strftime('%b-%d %a') for x in date_range_end]
+    fig = px.line(temp, x="date", y='stickiness', labels={'date':'Day', 'stickiness':'DAU/MAU (%)'})
+else:
+    temp['date'] = [x[0].strftime('%b %d')+"-"+x[1].strftime('%b %d') for x in zip(date_range_start,date_range_end)]
+    fig = px.line(temp, x="date", y='stickiness', labels={'date':'Week', 'stickiness':'WAU/MAU (%)'},markers=True)
+
+fig.update_yaxes(range=stickiness_yrange)
+stickiness_expander.plotly_chart(fig, use_container_width=True)
 
 
 
