@@ -55,7 +55,7 @@ st.sidebar.divider()
 st.sidebar.subheader("Settings")
 show_trends = st.sidebar.checkbox("Show trends",value=True,key="show_trends")
 if show_trends:
-    st.sidebar.write("Windows size")
+    st.sidebar.write("Window size")
     daily_window_size = st.sidebar.number_input("Daily",value=7,min_value=2,max_value=30,step=1,key="daily_window_size")
     weekly_window_size = st.sidebar.number_input("Weekly",value=6,min_value=2,max_value=12,step=1,key="weekly_window_size")
     biweekly_window_size = st.sidebar.number_input("Bi-weekly",value=4,min_value=2,max_value=12,step=1,key="biweekly_window_size")
