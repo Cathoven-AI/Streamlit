@@ -991,7 +991,7 @@ curr_expander.plotly_chart(fig, use_container_width=True)
 
 
 nurr_expander = st.expander("NURR")
-nurr_expander.write("New user retention rate")
+nurr_expander.write("New active user retention rate")
 nurr_col1, nurr_col2, nurr_col3 = nurr_expander.columns(3)
 nurr_freq = nurr_col3.selectbox('Time frame',('Weekly', 'Bi-weekly', 'Monthly'), key='nurr_freq')
 nurr_from = nurr_col1.date_input(label="From",value=default_from,key='nurr_from')
@@ -1002,9 +1002,10 @@ data = []
 raw_numbers = []
 for i in range(len(date_range_str)):
     date = pd.to_datetime(np.array(date_range_str[i]))
-    new_user_ids = df1[(df1['date_joined'].dt.normalize()>=date[0])&(df1['date_joined'].dt.normalize()<=date[1])]['id']
-    raw_numbers.append(len(new_user_ids))
-    l = list(np.round(active_users(date_range_str[i:],[new_user_ids]*len(date_range_str))[0]/len(new_user_ids),4)*100)
+    new_user_ids = set(df1[(df1['date_joined'].dt.normalize()>=date[0])&(df1['date_joined'].dt.normalize()<=date[1])]['id'].values)
+    new_active_user_counts, new_active_user_ids = active_users([date_range_str[i]],[new_user_ids])
+    raw_numbers.append(new_active_user_counts[0])
+    l = list(np.round(active_users(date_range_str[i:],[new_active_user_ids[0]]*len(date_range_str))[0]/new_active_user_counts[0],4)*100)
     data.append(l+[np.nan]*(len(date_range_str)-len(l)))
 data = np.array(data)
 
