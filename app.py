@@ -185,7 +185,13 @@ def continuous_active_users(dates, unit, n, among=None):
 def churned_users(dates, churning_threshold=30):
     counts = []
     ids = []
+
     already_churned = set()
+    date0 = pd.to_datetime(np.array(dates[0]))
+    length = pd.Timedelta(days=(date0[1]-date0[0]).days+1)
+    for day in pd.date_range(start=date0[0]-length, end=date0[1]-length, freq='D'):
+        already_churned = already_churned.union(set(df1[df1['last_login'].dt.normalize()<day-pd.Timedelta(days=churning_threshold)]['id'].values))
+    
     for date in dates:
         date = pd.to_datetime(np.array(date))
         churned_user_ids = set()
@@ -420,7 +426,7 @@ cu_col1, cu_col2, cu_col3 = cu_expander.columns(3)
 cu_from = cu_col1.date_input(label="From",value=default_from,key='cu_from')
 cu_to = cu_col2.date_input(label="To",value=default_to,key='cu_to')
 cu_freq = cu_col3.selectbox('Time frame',('Daily', 'Weekly', 'Bi-weekly', 'Monthly'),index=1,key='cu_freq')
-cu_yrange = cu_expander.slider("Y-axis range", value=(0, 100), min_value=0, max_value=1000, step=50, key='cu_yrange')
+cu_yrange = cu_expander.slider("Y-axis range", value=(0, 500), min_value=0, max_value=1000, step=50, key='cu_yrange')
 
 date_range_start, date_range_end, date_range_str = get_dates(cu_from,cu_to,cu_freq)
 churned_user_counts = churned_users(date_range_str,churning_threshold)[0]
