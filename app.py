@@ -33,9 +33,28 @@ def load_data(host,user,password):
     df2 = pd.DataFrame(results, columns = mycursor.column_names)
     df2 = df2[df2['host'].apply(lambda x: 'localhost' not in x and 'test' not in x)]
 
+
+    sql = "SELECT * FROM cathoven_api_webhookevents"
+    mycursor.execute(sql)
+    results = mycursor.fetchall()
+    df3 = pd.DataFrame(results, columns = mycursor.column_names)[['webhook_code','order_id','created']]
+
+    sql = "SELECT * FROM cathoven_api_paymenthistory"
+    mycursor.execute(sql)
+    results = mycursor.fetchall()
+    df4 = pd.DataFrame(results, columns = mycursor.column_names)[['order_id','package_id','user_id']]
+    df4 = df4[~pd.isnull(df4['user_id'])]
+
+    sql = "SELECT * FROM cathoven_api_package"
+    mycursor.execute(sql)
+    results = mycursor.fetchall()
+    df5 = pd.DataFrame(results, columns = mycursor.column_names)[['id','duration','name']]
+
+    df_pro = df3.merge(df4,how='left',on='order_id').merge(df5,how='left',left_on='package_id',right_on='id')
+    df_pro = df_pro[~pd.isnull(df_pro['user_id'])].drop_duplicates()
     mycursor.close()
 
-    return df1, df2
+    return df1, df2, df_pro
 
 st.sidebar.subheader("Credentials")
 host = st.sidebar.text_input('host')
@@ -44,7 +63,7 @@ password = st.sidebar.text_input('password',type='password')
 
 if host!='' and user!='' and password!='':
     try:
-        df1, df2 = load_data(host,user,password)
+        df1, df2, df_pro = load_data(host,user,password)
     except Exception as e:
         st.warning(e)
         st.stop()
@@ -83,7 +102,7 @@ if show_trends:
     biweekly_window_size = trend_settings_expander.number_input("Bi-weekly",value=4,min_value=2,max_value=12,step=1,key="biweekly_window_size")
     monthly_window_size = trend_settings_expander.number_input("Monthly",value=3,min_value=2,max_value=12,step=1,key="monthly_window_size")
 
-# 5. Trial Users: users who try features without registered
+
 @st.cache_data
 def trial_users(dates):
     counts = []
@@ -116,6 +135,21 @@ def registered_users(dates):
 def subscription_users(dates):
     dates = pd.to_datetime(dates)
     return len(df1[df1['pro']==True])
+
+@st.cache_data
+def new_subscription_users(dates, duration=0):
+    df_temp = df_pro[df_pro['webhook_code']=='BILLING.SUBSCRIPTION.ACTIVATED'].drop_duplicates()
+    counts = []
+    ids = []
+    for date in dates:
+        date = pd.to_datetime(np.array(date))
+        if duration==0:
+            temp = df_temp[(df_temp['created'].dt.normalize()>=date[0])&(df_temp['created'].dt.normalize()<=date[1])]
+        else:
+            temp = df_temp[(df_temp['created'].dt.normalize()>=date[0])&(df_temp['created'].dt.normalize()<=date[1])&(df_temp['duration']==duration)]
+        ids.append(set(temp['user_id'].values))
+        counts.append(len(temp))
+    return np.array(counts), ids
 
 @st.cache_data
 def active_users(dates, among=None):
@@ -380,7 +414,7 @@ cau_yrange = cau_expander.slider("Y-axis range", value=(0, 200), min_value=0, ma
 
 date_range_start, date_range_end, date_range_str = get_dates(cau_from,cau_to,cau_freq)
 cau = continuous_active_users(date_range_str,cau_unit,cau_n)[0]
-print(cau)
+
 fig = go.Figure()
 if cau_freq=='Daily':
     x = [x.strftime('%b-%d %a') for x in date_range_end]
@@ -468,6 +502,65 @@ fig.update_layout(legend=dict(yanchor="top",y=1.2,xanchor="left",x=0.01))
 fig.update_yaxes(range=cu_yrange)
 cu_expander.plotly_chart(fig, use_container_width=True)
 
+
+
+nsu_expander = st.expander("New Subscription Users")
+nsu_col1, nsu_col2, nsu_col3, nsu_col4 = nsu_expander.columns(4)
+nsu_from = nsu_col1.date_input(label="From",value=default_from,key='nsu_from')
+nsu_to = nsu_col2.date_input(label="To",value=default_to,key='nsu_to')
+nsu_freq = nsu_col3.selectbox('Time frame',('Daily', 'Weekly', 'Bi-weekly', 'Monthly'),index=1,key='nsu_freq')
+nsu_duration = nsu_col4.selectbox('Subscription length',('1 month', '6 month', '12 month', 'All length'),index=3,key='nsu_duration')
+nsu_yrange = nsu_expander.slider("Y-axis range", value=(0, 10), min_value=0, max_value=100, step=5, key='nsu_yrange')
+
+date_range_start, date_range_end, date_range_str = get_dates(nsu_from,nsu_to,nsu_freq)
+
+if nsu_duration=='1 month':
+    duration = 1
+elif nsu_duration=='6 month':
+    duration = 6
+elif nsu_duration=='12 month':
+    duration = 12
+else:
+    duration = 0
+nsu = new_subscription_users(date_range_str,duration)[0]
+
+fig = go.Figure()
+if nsu_freq=='Daily':
+    x = [x.strftime('%b-%d %a') for x in date_range_end]
+    fig.add_trace(go.Scatter(x=x, y=nsu, name=f'New Subscription Users ({nsu_duration})'))
+    fig.update_layout(xaxis_title='Day',yaxis_title="New Subscription Users")
+elif nsu_freq=='Weekly':
+    x = [x[0].strftime('%b %d')+"-"+x[1].strftime('%b %d') for x in zip(date_range_start,date_range_end)]
+    fig.add_trace(go.Scatter(x=x, y=nsu, name=f'New Subscription Users ({nsu_duration})'))
+    fig.update_layout(xaxis_title='Week',yaxis_title="New Subscription Users")
+elif nsu_freq=='Bi-weekly':
+    x = [x[0].strftime('%b %d')+"-"+x[1].strftime('%b %d') for x in zip(date_range_start,date_range_end)]
+    fig.add_trace(go.Scatter(x=x, y=nsu, name=f'New Subscription Users ({nsu_duration})'))
+    fig.update_layout(xaxis_title='bi-week',yaxis_title="New Subscription Users")
+else:
+    x = [x.strftime('%Y %b') for x in date_range_end]
+    fig.add_trace(go.Scatter(x=x, y=nsu, name=f'New Subscription Users ({nsu_duration})'))
+    fig.update_layout(xaxis_title='Month',yaxis_title="New Subscription Users")
+
+
+if show_trends:
+    if nsu_freq=='Daily':
+        extra_range_start, extra_range_end, extra_range_str = get_dates(nsu_from-pd.Timedelta(days=daily_window_size-1),nsu_from,nsu_freq)
+        nsu_trend = moving_average(list(new_subscription_users(extra_range_str,duration)[0])+list(nsu),window_size=daily_window_size)[-len(nsu):]
+    elif nsu_freq=='Weekly':
+        extra_range_start, extra_range_end, extra_range_str = get_dates(nsu_from-pd.Timedelta(days=(weekly_window_size-1)*7),nsu_from,nsu_freq)
+        nsu_trend = moving_average(list(new_subscription_users(extra_range_str,duration)[0])+list(nsu),window_size=weekly_window_size)[-len(nsu):]
+    elif nsu_freq=='Bi-weekly':
+        extra_range_start, extra_range_end, extra_range_str = get_dates(nsu_from-pd.Timedelta(days=(biweekly_window_size-1)*14),nsu_from,nsu_freq)
+        nsu_trend = moving_average(list(new_subscription_users(extra_range_str,duration)[0])+list(nsu),window_size=biweekly_window_size)[-len(nsu):]
+    else:
+        extra_range_start, extra_range_end, extra_range_str = get_dates(nsu_from-pd.Timedelta(days=(monthly_window_size-1)*31),nsu_from,nsu_freq)
+        nsu_trend = moving_average(list(new_subscription_users(extra_range_str,duration)[0])+list(nsu),window_size=monthly_window_size)[-len(nsu):]
+    fig.add_trace(go.Scatter(x=x, y=nsu_trend, name='Trend', line=dict(color='firebrick', dash='dash')))
+
+fig.update_layout(legend=dict(yanchor="top",y=1.2,xanchor="left",x=0.01))
+fig.update_yaxes(range=nsu_yrange)
+nsu_expander.plotly_chart(fig, use_container_width=True)
 
 
 
