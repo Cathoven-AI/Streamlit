@@ -53,13 +53,24 @@ else:
 
 st.sidebar.divider()
 st.sidebar.subheader("Settings")
-show_trends = st.sidebar.checkbox("Show trends",value=True,key="show_trends")
+
+reactivation_settings_expander = st.sidebar.expander("Reactivation window length (days)")
+reactivation_settings_expander.caption("Reactivated users: active in period A, inactive in period B, and active again in period C.")
+reactivation_settings_expander.caption("0: same as chosen time frame")
+reactivation_settings_expander.caption("-1: indefinite")
+
+previous_active_period = reactivation_settings_expander.number_input("Previous active period (A)",value=0,min_value=-1,max_value=90,step=1,key="previous_active_period")
+inactive_period = reactivation_settings_expander.number_input("Inactive period (B)",value=0,min_value=0,max_value=90,step=1,key="inactive_period")
+reactive_period = reactivation_settings_expander.number_input("Reactive period (C)",value=0,min_value=0,max_value=1,step=1,key="reactive_period")
+
+trend_settings_expander = st.sidebar.expander("Trends")
+show_trends = trend_settings_expander.checkbox("Show trends",value=True,key="show_trends")
 if show_trends:
-    st.sidebar.write("Window size")
-    daily_window_size = st.sidebar.number_input("Daily",value=7,min_value=2,max_value=30,step=1,key="daily_window_size")
-    weekly_window_size = st.sidebar.number_input("Weekly",value=6,min_value=2,max_value=12,step=1,key="weekly_window_size")
-    biweekly_window_size = st.sidebar.number_input("Bi-weekly",value=4,min_value=2,max_value=12,step=1,key="biweekly_window_size")
-    monthly_window_size = st.sidebar.number_input("Monthly",value=3,min_value=2,max_value=12,step=1,key="monthly_window_size")
+    trend_settings_expander.write("Window size")
+    daily_window_size = trend_settings_expander.number_input("Daily",value=7,min_value=2,max_value=30,step=1,key="daily_window_size")
+    weekly_window_size = trend_settings_expander.number_input("Weekly",value=6,min_value=2,max_value=12,step=1,key="weekly_window_size")
+    biweekly_window_size = trend_settings_expander.number_input("Bi-weekly",value=4,min_value=2,max_value=12,step=1,key="biweekly_window_size")
+    monthly_window_size = trend_settings_expander.number_input("Monthly",value=3,min_value=2,max_value=12,step=1,key="monthly_window_size")
 
 # 5. Trial Users: users who try features without registered
 @st.cache_data
@@ -74,10 +85,13 @@ def trial_users(dates):
 @st.cache_data
 def new_users(dates):
     counts = []
+    ids = []
     for date in dates:
         date = pd.to_datetime(np.array(date))
-        counts.append(len(df1[(df1['date_joined'].dt.normalize()>=date[0])&(df1['date_joined'].dt.normalize()<=date[1])]))
-    return np.array(counts)
+        temp = df1[(df1['date_joined'].dt.normalize()>=date[0])&(df1['date_joined'].dt.normalize()<=date[1])]
+        ids.append(set(temp['id'].values))
+        counts.append(len(temp))
+    return np.array(counts), ids
 
 @st.cache_data
 def registered_users(dates):
@@ -103,20 +117,22 @@ def active_users(dates, among=None):
     #    df2_temp = df2_temp[df2_temp['user_id'].apply(lambda x: x in among)]
 
     counts = []
-    for date in dates:
+    ids = []
+    for i, date in enumerate(dates):
         date = pd.to_datetime(np.array(date))
         active_user_ids = set(df2_temp[(df2_temp['requested_at']>=date[0])&(df2_temp['requested_at']<=date[1])]['user_id'].values)
         if among is not None:
-            active_user_ids = active_user_ids.intersection(among)
+            active_user_ids = active_user_ids.intersection(among[i])
         # count = 0
         # date_range = set([x.strftime('%Y-%m-%d') for x in pd.date_range(start=date[0], end=date[1], freq='D')])
         # for _,g in df2_temp.groupby('user_id'):
         #     if len(date_range.intersection(set(g['requested_at'].values)))>0:
         #         count += 1
         # counts.append(count)
+        ids.append(active_user_ids)
         counts.append(len(active_user_ids))
 
-    return np.array(counts)
+    return np.array(counts), ids
 
 
 @st.cache_data
@@ -131,8 +147,8 @@ def rurr(dates):
         date = pd.to_datetime(np.array(date))
         freq = (date[1]-date[0]).days+1
 
-        reactive_user_count = 0
-        return_reactive_user_count = 0
+        reactivated_user_count = 0
+        return_reactivated_user_count = 0
         for _,g in df2_temp.groupby('user_id'):
             if len(g[(g['requested_at']>=date[0]-pd.Timedelta(days=freq))&(g['requested_at']<=date[1]-pd.Timedelta(days=freq))])==0:
                 continue
@@ -140,48 +156,61 @@ def rurr(dates):
                 continue
             if len(g[g['requested_at']<date[1]-pd.Timedelta(days=freq*2)])==0:
                 continue
-            reactive_user_count += 1
+            reactivated_user_count += 1
             if len(g[(g['requested_at']>=date[0])&(g['requested_at']<=date[1])])>0:
-                return_reactive_user_count += 1
-        if reactive_user_count==0:
+                return_reactivated_user_count += 1
+        if reactivated_user_count==0:
             rurrs.append(0)
         else:
-            rurrs.append(return_reactive_user_count/reactive_user_count)
+            rurrs.append(return_reactivated_user_count/reactivated_user_count)
     return np.array(rurrs)
 
 @st.cache_data
-def get_reactive_users(dates):
+def get_reactivated_users(dates, reactive_period=0, inactive_period=0, previous_active_period=0):
     df2_temp = df2[df2['username_persistent']!='Anonymous'].copy()
     df2_temp['requested_at'] = df2_temp['requested_at'].dt.normalize()
     #df2_temp = df2_temp[df2_temp['requested_at']>=pd.to_datetime(dates[0][0])-pd.Timedelta(days=31)]
     df2_temp = df2_temp.drop_duplicates(['user_id','requested_at'])
     
-    reactive_users = []
+    reactivated_users = []
     for date in dates:
         date = pd.to_datetime(np.array(date))
-        freq = (date[1]-date[0]).days+1
+        if reactive_period == 0:
+            reactive_period = (date[1]-date[0]).days+1
+        if inactive_period == 0:
+            inactive_period = (date[1]-date[0]).days+1
+        if previous_active_period == 0:
+            previous_active_period = (date[1]-date[0]).days+1
 
-        active_this_period = set(df2_temp[(df2_temp['requested_at']>=date[0])&(df2_temp['requested_at']<=date[1])]['user_id'].values)
-        active_previous_period = set(df2_temp[((df2_temp['requested_at']>=date[0]-pd.Timedelta(days=freq))&(df2_temp['requested_at']<=date[1]-pd.Timedelta(days=freq)))]['user_id'].values)
-        active_before_previous_period = set(df2_temp[df2_temp['requested_at']<date[0]-pd.Timedelta(days=freq)]['user_id'].values)
-
-        # user_ids = []
-        # for user_id,g in df2_temp.groupby('user_id'):
-        #     if len(g[(g['requested_at']>=date[0])&(g['requested_at']<=date[1])])==0:
-        #         continue
-        #     if len(g[(g['requested_at']>=date[0]-pd.Timedelta(days=freq))&(g['requested_at']<=date[1]-pd.Timedelta(days=freq))])>0:
-        #         continue
-        #     if len(g[g['requested_at']<date[1]-pd.Timedelta(days=freq)])==0:
-        #         continue
-        #     user_ids.append(user_id)
-        #reactive_users.append(user_ids)
-        reactive_users.append(set((active_this_period-active_previous_period).intersection(active_before_previous_period)))
-    return reactive_users
+        reactivated_user_set = set()
+        if reactive_period==1:
+            for day in pd.date_range(start=date[0], end=date[1], freq='D'):
+                active_this_period = set(df2_temp[df2_temp['requested_at']==day]['user_id'].values)
+                active_previous_period = set(df2_temp[((df2_temp['requested_at']>=day-pd.Timedelta(days=inactive_period))&(df2_temp['requested_at']<day))]['user_id'].values)
+                if previous_active_period == -1:
+                    active_before_previous_period = set(df2_temp[df2_temp['requested_at']<day-pd.Timedelta(days=inactive_period)]['user_id'].values)
+                else:
+                    active_before_previous_period = set(df2_temp[(df2_temp['requested_at']>=day-pd.Timedelta(days=inactive_period+previous_active_period))&(df2_temp['requested_at']<day-pd.Timedelta(days=inactive_period))]['user_id'].values)
+        else:
+            active_this_period = set(df2_temp[(df2_temp['requested_at']>=date[0])&(df2_temp['requested_at']<=date[1])]['user_id'].values)
+            active_previous_period = set(df2_temp[((df2_temp['requested_at']>=date[0]-pd.Timedelta(days=inactive_period))&(df2_temp['requested_at']<=date[1]-pd.Timedelta(days=inactive_period)))]['user_id'].values)
+            if previous_active_period == -1:
+                active_before_previous_period = set(df2_temp[df2_temp['requested_at']<date[0]-pd.Timedelta(days=inactive_period)]['user_id'].values)
+            else:
+                active_before_previous_period = set(df2_temp[(df2_temp['requested_at']>=date[0]-pd.Timedelta(days=inactive_period+previous_active_period))&(df2_temp['requested_at']<date[0]-pd.Timedelta(days=inactive_period))]['user_id'].values)
+        reactivated_user_set = reactivated_user_set.union((active_this_period-active_previous_period).intersection(active_before_previous_period))
+        reactivated_users.append(reactivated_user_set)
+    return reactivated_users
 
 
 @st.cache_data
 def engagement_rate(dates):
-    return active_users(dates)/registered_users([date[1] for date in dates])
+    return active_users(dates)[0]/registered_users([date[1] for date in dates])
+
+@st.cache_data
+def activation_rate(dates):
+    new_user_counts, new_user_ids = new_users(dates)
+    return active_users(dates, new_user_ids)[0]/new_user_counts
 
 @st.cache_data
 def moving_average(arr, window_size=0):
@@ -223,11 +252,11 @@ au_expander.write("Active Users")
 au_col1, au_col2, au_col3 = au_expander.columns(3)
 au_from = au_col1.date_input(label="From",value=default_from,key='au_from')
 au_to = au_col2.date_input(label="To",value=default_to,key='au_to')
-au_freq = au_col3.selectbox('Frequency',('Daily', 'Weekly', 'Bi-weekly', 'Monthly'),index=1,key='au_freq')
+au_freq = au_col3.selectbox('Time frame',('Daily', 'Weekly', 'Bi-weekly', 'Monthly'),index=1,key='au_freq')
 au_yrange = au_expander.slider("Y-axis range", value=(0, 500), min_value=0, max_value=2000, step=100, key='au_yrange')
 
 date_range_start, date_range_end, date_range_str = get_dates(au_from,au_to,au_freq)
-active_user_counts = active_users(date_range_str)
+active_user_counts = active_users(date_range_str)[0]
 
 fig = go.Figure()
 
@@ -251,21 +280,71 @@ else:
 if show_trends:
     if au_freq=='Daily':
         extra_range_start, extra_range_end, extra_range_str = get_dates(au_from-pd.Timedelta(days=daily_window_size-1),au_from,au_freq)
-        active_user_trend = moving_average(list(active_users(extra_range_str))+list(active_user_counts),window_size=daily_window_size)[-len(active_user_counts):]
+        active_user_trend = moving_average(list(active_users(extra_range_str)[0])+list(active_user_counts),window_size=daily_window_size)[-len(active_user_counts):]
     elif au_freq=='Weekly':
         extra_range_start, extra_range_end, extra_range_str = get_dates(au_from-pd.Timedelta(days=(weekly_window_size-1)*7),au_from,au_freq)
-        active_user_trend = moving_average(list(active_users(extra_range_str))+list(active_user_counts),window_size=weekly_window_size)[-len(active_user_counts):]
+        active_user_trend = moving_average(list(active_users(extra_range_str)[0])+list(active_user_counts),window_size=weekly_window_size)[-len(active_user_counts):]
     elif au_freq=='Bi-weekly':
         extra_range_start, extra_range_end, extra_range_str = get_dates(au_from-pd.Timedelta(days=(biweekly_window_size-1)*14),au_from,au_freq)
-        active_user_trend = moving_average(list(active_users(extra_range_str))+list(active_user_counts),window_size=biweekly_window_size)[-len(active_user_counts):]
+        active_user_trend = moving_average(list(active_users(extra_range_str)[0])+list(active_user_counts),window_size=biweekly_window_size)[-len(active_user_counts):]
     else:
         extra_range_start, extra_range_end, extra_range_str = get_dates(au_from-pd.Timedelta(days=(monthly_window_size-1)*31),au_from,au_freq)
-        active_user_trend = moving_average(list(active_users(extra_range_str))+list(active_user_counts),window_size=monthly_window_size)[-len(active_user_counts):]
+        active_user_trend = moving_average(list(active_users(extra_range_str)[0])+list(active_user_counts),window_size=monthly_window_size)[-len(active_user_counts):]
     fig.add_trace(go.Scatter(x=x, y=active_user_trend, name='Trend', line=dict(color='firebrick', dash='dash')))
 
-fig.update_layout(legend=dict(yanchor="top",y=0.99,xanchor="left",x=0.01))
+fig.update_layout(legend=dict(yanchor="top",y=1.2,xanchor="left",x=0.01))
 fig.update_yaxes(range=au_yrange)
 au_expander.plotly_chart(fig, use_container_width=True)
+
+
+
+tr_expander = st.expander("Trial Users")
+tr_col1, tr_col2, tr_col3 = tr_expander.columns(3)
+tr_from = tr_col1.date_input(label="From",value=default_from,key='tr_from')
+tr_to = tr_col2.date_input(label="To",value=default_to,key='tr_to')
+tr_freq = tr_col3.selectbox('Time frame',('Daily', 'Weekly', 'Bi-weekly', 'Monthly'),index=1,key='tr_freq')
+tr_yrange = tr_expander.slider("Y-axis range", value=(0, 1000), min_value=0, max_value=4000, step=50, key='tr_yrange')
+
+date_range_start, date_range_end, date_range_str = get_dates(tr_from,tr_to,tr_freq)
+trial_user_counts = trial_users(date_range_str)
+
+fig = go.Figure()
+if tr_freq=='Daily':
+    x = [x.strftime('%b-%d %a') for x in date_range_end]
+    fig.add_trace(go.Scatter(x=x, y=trial_user_counts, name='DNU'))
+    fig.update_layout(xaxis_title='Day',yaxis_title='DNU')
+elif tr_freq=='Weekly':
+    x = [x[0].strftime('%b %d')+"-"+x[1].strftime('%b %d') for x in zip(date_range_start,date_range_end)]
+    fig.add_trace(go.Scatter(x=x, y=trial_user_counts, name='WNU'))
+    fig.update_layout(xaxis_title='Week',yaxis_title='WNU')
+elif tr_freq=='Bi-weekly':
+    x = [x[0].strftime('%b %d')+"-"+x[1].strftime('%b %d') for x in zip(date_range_start,date_range_end)]
+    fig.add_trace(go.Scatter(x=x, y=trial_user_counts, name='WNU'))
+    fig.update_layout(xaxis_title='Bi-week',yaxis_title='2WNU')
+else:
+    x = [x.strftime('%Y %b') for x in date_range_end]
+    fig.add_trace(go.Scatter(x=x, y=trial_user_counts, name='WNU'))
+    fig.update_layout(xaxis_title='Month',yaxis_title='MNU')
+
+if show_trends:
+    if tr_freq=='Daily':
+        extra_range_start, extra_range_end, extra_range_str = get_dates(tr_from-pd.Timedelta(days=daily_window_size-1),tr_from,tr_freq)
+        trial_user_trend = moving_average(list(trial_users(extra_range_str))+list(trial_user_counts),window_size=daily_window_size)[-len(trial_user_counts):]
+    elif tr_freq=='Weekly':
+        extra_range_start, extra_range_end, extra_range_str = get_dates(tr_from-pd.Timedelta(days=(weekly_window_size-1)*7),tr_from,tr_freq)
+        trial_user_trend = moving_average(list(trial_users(extra_range_str))+list(trial_user_counts),window_size=weekly_window_size)[-len(trial_user_counts):]
+    elif tr_freq=='Bi-weekly':
+        extra_range_start, extra_range_end, extra_range_str = get_dates(tr_from-pd.Timedelta(days=(biweekly_window_size-1)*14),tr_from,tr_freq)
+        trial_user_trend = moving_average(list(trial_users(extra_range_str))+list(trial_user_counts),window_size=biweekly_window_size)[-len(trial_user_counts):]
+    else:
+        extra_range_start, extra_range_end, extra_range_str = get_dates(tr_from-pd.Timedelta(days=(monthly_window_size-1)*31),tr_from,tr_freq)
+        trial_user_trend = moving_average(list(trial_users(extra_range_str))+list(trial_user_counts),window_size=monthly_window_size)[-len(trial_user_counts):]
+    fig.add_trace(go.Scatter(x=x, y=trial_user_trend, name='Trend', line=dict(color='firebrick', dash='dash')))
+
+fig.update_layout(legend=dict(yanchor="top",y=1.2,xanchor="left",x=0.01))
+fig.update_yaxes(range=tr_yrange)
+tr_expander.plotly_chart(fig, use_container_width=True)
+
 
 
 
@@ -274,11 +353,11 @@ nu_expander.write("New Users")
 nu_col1, nu_col2, nu_col3 = nu_expander.columns(3)
 nu_from = nu_col1.date_input(label="From",value=default_from,key='nu_from')
 nu_to = nu_col2.date_input(label="To",value=default_to,key='nu_to')
-nu_freq = nu_col3.selectbox('Frequency',('Daily', 'Weekly', 'Bi-weekly', 'Monthly'),index=1,key='nu_freq')
+nu_freq = nu_col3.selectbox('Time frame',('Daily', 'Weekly', 'Bi-weekly', 'Monthly'),index=1,key='nu_freq')
 nu_yrange = nu_expander.slider("Y-axis range", value=(0, 500), min_value=0, max_value=2000, step=50, key='nu_yrange')
 
 date_range_start, date_range_end, date_range_str = get_dates(nu_from,nu_to,nu_freq)
-new_user_counts = new_users(date_range_str)
+new_user_counts = new_users(date_range_str)[0]
 
 fig = go.Figure()
 if nu_freq=='Daily':
@@ -301,21 +380,76 @@ else:
 if show_trends:
     if nu_freq=='Daily':
         extra_range_start, extra_range_end, extra_range_str = get_dates(nu_from-pd.Timedelta(days=daily_window_size-1),nu_from,nu_freq)
-        new_user_trend = moving_average(list(new_users(extra_range_str))+list(new_user_counts),window_size=daily_window_size)[-len(new_user_counts):]
+        new_user_trend = moving_average(list(new_users(extra_range_str)[0])+list(new_user_counts),window_size=daily_window_size)[-len(new_user_counts):]
     elif nu_freq=='Weekly':
         extra_range_start, extra_range_end, extra_range_str = get_dates(nu_from-pd.Timedelta(days=(weekly_window_size-1)*7),nu_from,nu_freq)
-        new_user_trend = moving_average(list(new_users(extra_range_str))+list(new_user_counts),window_size=weekly_window_size)[-len(new_user_counts):]
+        new_user_trend = moving_average(list(new_users(extra_range_str)[0])+list(new_user_counts),window_size=weekly_window_size)[-len(new_user_counts):]
     elif nu_freq=='Bi-weekly':
         extra_range_start, extra_range_end, extra_range_str = get_dates(nu_from-pd.Timedelta(days=(biweekly_window_size-1)*14),nu_from,nu_freq)
-        new_user_trend = moving_average(list(new_users(extra_range_str))+list(new_user_counts),window_size=biweekly_window_size)[-len(new_user_counts):]
+        new_user_trend = moving_average(list(new_users(extra_range_str)[0])+list(new_user_counts),window_size=biweekly_window_size)[-len(new_user_counts):]
     else:
         extra_range_start, extra_range_end, extra_range_str = get_dates(nu_from-pd.Timedelta(days=(monthly_window_size-1)*31),nu_from,nu_freq)
-        new_user_trend = moving_average(list(new_users(extra_range_str))+list(new_user_counts),window_size=monthly_window_size)[-len(new_user_counts):]
+        new_user_trend = moving_average(list(new_users(extra_range_str)[0])+list(new_user_counts),window_size=monthly_window_size)[-len(new_user_counts):]
     fig.add_trace(go.Scatter(x=x, y=new_user_trend, name='Trend', line=dict(color='firebrick', dash='dash')))
 
-fig.update_layout(legend=dict(yanchor="top",y=0.99,xanchor="left",x=0.01))
+fig.update_layout(legend=dict(yanchor="top",y=1.2,xanchor="left",x=0.01))
 fig.update_yaxes(range=nu_yrange)
 nu_expander.plotly_chart(fig, use_container_width=True)
+
+
+
+
+ar_expander = st.expander("Activation Rate")
+ar_expander.write("New users who are active / New users")
+ar_col1, ar_col2, ar_col3 = ar_expander.columns(3)
+ar_from = ar_col1.date_input(label="From",value=default_from,key='ar_from')
+ar_to = ar_col2.date_input(label="To",value=default_to,key='ar_to')
+ar_freq = ar_col3.selectbox('Time frame',('Daily', 'Weekly', 'Bi-weekly', 'Monthly'),index=1,key='ar_freq')
+ar_yrange = ar_expander.slider("Y-axis range", value=(0, 50), min_value=0, max_value=100, step=5, key='ar_yrange')
+
+date_range_start, date_range_end, date_range_str = get_dates(ar_from,ar_to,ar_freq)
+ar = np.round(activation_rate(date_range_str)*100,2)
+
+fig = go.Figure()
+if ar_freq=='Daily':
+    x = [x.strftime('%b-%d %a') for x in date_range_end]
+    fig.add_trace(go.Scatter(x=x, y=ar, name='Daily Activation Rate (%)'))
+    fig.update_layout(xaxis_title='Day',yaxis_title='Daily Activation Rate (%)')
+elif ar_freq=='Weekly':
+    x = [x[0].strftime('%b %d')+"-"+x[1].strftime('%b %d') for x in zip(date_range_start,date_range_end)]
+    fig.add_trace(go.Scatter(x=x, y=ar, name='Weekly Activation Rate (%)'))
+    fig.update_layout(xaxis_title='Week',yaxis_title='Weekly Activation Rate (%)')
+elif ar_freq=='Bi-weekly':
+    x = [x[0].strftime('%b %d')+"-"+x[1].strftime('%b %d') for x in zip(date_range_start,date_range_end)]
+    fig.add_trace(go.Scatter(x=x, y=ar, name='Bi-weekly Activation Rate (%)'))
+    fig.update_layout(xaxis_title='Bi-week',yaxis_title='Bi-weekly Activation Rate (%)')
+else:
+    x = [x.strftime('%Y %b') for x in date_range_end]
+    fig.add_trace(go.Scatter(x=x, y=ar, name='Monthly Activation Rate (%)'))
+    fig.update_layout(xaxis_title='Month',yaxis_title='Monthly Activation Rate (%)')
+
+if show_trends:
+    if ar_freq=='Daily':
+        extra_range_start, extra_range_end, extra_range_str = get_dates(ar_from-pd.Timedelta(days=daily_window_size-1),ar_from,ar_freq)
+        extra_ar = np.round(activation_rate(date_range_str)*100,2)
+        ar_trend = moving_average(list(extra_ar)+list(ar),window_size=daily_window_size)[-len(ar):]
+    elif ar_freq=='Weekly':
+        extra_range_start, extra_range_end, extra_range_str = get_dates(ar_from-pd.Timedelta(days=(weekly_window_size-1)*7),ar_from,ar_freq)
+        extra_ar = np.round(activation_rate(date_range_str)*100,2)
+        ar_trend = moving_average(list(extra_ar)+list(ar),window_size=weekly_window_size)[-len(ar):]
+    elif ar_freq=='Bi-weekly':
+        extra_range_start, extra_range_end, extra_range_str = get_dates(ar_from-pd.Timedelta(days=(biweekly_window_size-1)*14),ar_from,ar_freq)
+        extra_ar = np.round(activation_rate(date_range_str)*100,2)
+        ar_trend = moving_average(list(extra_ar)+list(ar),window_size=biweekly_window_size)[-len(ar):]
+    else:
+        extra_range_start, extra_range_end, extra_range_str = get_dates(ar_from-pd.Timedelta(days=(monthly_window_size-1)*31),ar_from,ar_freq)
+        extra_ar = np.round(activation_rate(date_range_str)*100,2)
+        ar_trend = moving_average(list(extra_ar)+list(ar),window_size=monthly_window_size)[-len(ar):]
+    fig.add_trace(go.Scatter(x=x, y=ar_trend, name='Trend', line=dict(color='firebrick', dash='dash')))
+
+fig.update_layout(legend=dict(yanchor="top",y=1.2,xanchor="left",x=0.01))
+fig.update_yaxes(range=ar_yrange)
+ar_expander.plotly_chart(fig, use_container_width=True)
 
 
 
@@ -326,7 +460,7 @@ er_expander.write("Active users / All users")
 er_col1, er_col2, er_col3 = er_expander.columns(3)
 er_from = er_col1.date_input(label="From",value=default_from,key='er_from')
 er_to = er_col2.date_input(label="To",value=default_to,key='er_to')
-er_freq = er_col3.selectbox('Frequency',('Daily', 'Weekly', 'Bi-weekly', 'Monthly'),index=1,key='er_freq')
+er_freq = er_col3.selectbox('Time frame',('Daily', 'Weekly', 'Bi-weekly', 'Monthly'),index=1,key='er_freq')
 er_yrange = er_expander.slider("Y-axis range", value=(0, 50), min_value=0, max_value=100, step=5, key='er_yrange')
 
 date_range_start, date_range_end, date_range_str = get_dates(er_from,er_to,er_freq)
@@ -369,7 +503,7 @@ if show_trends:
         er_trend = moving_average(list(extra_er)+list(er_expander),window_size=monthly_window_size)[-len(er):]
     fig.add_trace(go.Scatter(x=x, y=er_trend, name='Trend', line=dict(color='firebrick', dash='dash')))
 
-fig.update_layout(legend=dict(yanchor="top",y=0.99,xanchor="left",x=0.01))
+fig.update_layout(legend=dict(yanchor="top",y=1.2,xanchor="left",x=0.01))
 fig.update_yaxes(range=er_yrange)
 er_expander.plotly_chart(fig, use_container_width=True)
 
@@ -382,7 +516,7 @@ stickiness_expander.write("DAU/MAU or WAU/MAU")
 stickiness_col1, stickiness_col2, stickiness_col3 = stickiness_expander.columns(3)
 stickiness_from = stickiness_col1.date_input(label="From",value=default_from,key='stickiness_from')
 stickiness_to = stickiness_col2.date_input(label="To",value=default_to,key='stickiness_to')
-stickiness_freq = stickiness_col3.selectbox('Frequency',('Daily', 'Weekly'),index=1,key='stickiness_freq')
+stickiness_freq = stickiness_col3.selectbox('Time frame',('Daily', 'Weekly'),index=1,key='stickiness_freq')
 stickiness_yrange = stickiness_expander.slider("Y-axis range", value=(0, 100), min_value=0, max_value=100, step=5, key='stickiness_yrange')
 
 date_range_start, date_range_end, date_range_str = get_dates(stickiness_from,stickiness_to,stickiness_freq)
@@ -390,8 +524,8 @@ month_range_start = [end-pd.Timedelta(days=29) for end in date_range_end]
 month_range_start_str = np.array([x.strftime('%Y-%m-%d') for x in month_range_start])
 month_range_end_str = np.array([x.strftime('%Y-%m-%d') for x in date_range_end])
 month_range_str = np.array(list(zip(month_range_start_str,month_range_end_str)))
-mau = active_users(month_range_str)
-au = active_users(date_range_str)
+mau = active_users(month_range_str)[0]
+au = active_users(date_range_str)[0]
 stickiness = np.round(au/mau*100,2)
 
 fig = go.Figure()
@@ -411,8 +545,8 @@ if show_trends:
         extra_month_range_start_str = np.array([x.strftime('%Y-%m-%d') for x in extra_month_range_start])
         extra_month_range_end_str = np.array([x.strftime('%Y-%m-%d') for x in extra_range_end])
         extra_month_range_str = np.array(list(zip(extra_month_range_start_str,extra_month_range_end_str)))
-        extra_mau = active_users(extra_month_range_str)
-        extra_au = active_users(extra_range_str)
+        extra_mau = active_users(extra_month_range_str)[0]
+        extra_au = active_users(extra_range_str)[0]
         extra_stickiness = np.round(extra_au/extra_mau*100,2)
         stickiness_trend = moving_average(list(extra_stickiness)+list(stickiness),window_size=daily_window_size)[-len(stickiness):]
     else:
@@ -421,13 +555,13 @@ if show_trends:
         extra_month_range_start_str = np.array([x.strftime('%Y-%m-%d') for x in extra_month_range_start])
         extra_month_range_end_str = np.array([x.strftime('%Y-%m-%d') for x in extra_range_end])
         extra_month_range_str = np.array(list(zip(extra_month_range_start_str,extra_month_range_end_str)))
-        extra_mau = active_users(extra_month_range_str)
-        extra_au = active_users(extra_range_str)
+        extra_mau = active_users(extra_month_range_str)[0]
+        extra_au = active_users(extra_range_str)[0]
         extra_stickiness = np.round(extra_au/extra_mau*100,2)
         stickiness_trend = moving_average(list(extra_stickiness)+list(stickiness),window_size=weekly_window_size)[-len(stickiness):]
     fig.add_trace(go.Scatter(x=x, y=stickiness_trend, name='Trend', line=dict(color='firebrick', dash='dash')))
 
-fig.update_layout(legend=dict(yanchor="top",y=0.99,xanchor="left",x=0.01))
+fig.update_layout(legend=dict(yanchor="top",y=1.2,xanchor="left",x=0.01))
 fig.update_yaxes(range=stickiness_yrange)
 stickiness_expander.plotly_chart(fig, use_container_width=True)
 
@@ -439,7 +573,7 @@ stickiness_expander.plotly_chart(fig, use_container_width=True)
 # curr_col1, curr_col2, curr_col3 = curr_expander.columns(3)
 # curr_from = curr_col1.date_input(label="From",value=default_from,key='curr_from')
 # curr_to = curr_col2.date_input(label="To",value=default_to,key='curr_to')
-# curr_freq = curr_col3.selectbox('Frequency',('Weekly', 'Bi-weekly', 'Monthly'),key='curr_freq')
+# curr_freq = curr_col3.selectbox('Time frame',('Weekly', 'Bi-weekly', 'Monthly'),key='curr_freq')
 # curr_yrange = curr_expander.slider("Y-axis range", value=(0, 100), min_value=0, max_value=100, step=5, key='curr_yrange')
 
 # if curr_from is not None and au_to is not None:
@@ -466,7 +600,7 @@ stickiness_expander.plotly_chart(fig, use_container_width=True)
 
 # miscellaneous_expander = st.expander("RURR/SURR")
 # miscellaneous_col1, miscellaneous_col2, miscellaneous_col3 = miscellaneous_expander.columns(3)
-# miscellaneous_freq = miscellaneous_col3.selectbox('Frequency',('-','Daily', 'Weekly', 'Bi-weekly', 'Monthly'), key='miscellaneous_freq')
+# miscellaneous_freq = miscellaneous_col3.selectbox('Time frame',('-','Daily', 'Weekly', 'Bi-weekly', 'Monthly'), key='miscellaneous_freq')
 # miscellaneous_from = miscellaneous_col1.date_input(label="From",value=default_from,key='miscellaneous_from')
 # miscellaneous_to = miscellaneous_col2.date_input(label="To",value=default_to,key='miscellaneous_to')
 # miscellaneous_yrange = miscellaneous_expander.slider("Y-axis range", value=(0, 100), min_value =0, max_value=100, step=5, key='miscellaneous_yrange')
@@ -496,7 +630,7 @@ stickiness_expander.plotly_chart(fig, use_container_width=True)
 curr_expander = st.expander("CURR")
 curr_expander.write("Current user retention rate")
 curr_col1, curr_col2, curr_col3 = curr_expander.columns(3)
-curr_freq = curr_col3.selectbox('Frequency',('Weekly', 'Bi-weekly', 'Monthly'), key='curr_freq')
+curr_freq = curr_col3.selectbox('Time frame',('Weekly', 'Bi-weekly', 'Monthly'), key='curr_freq')
 curr_from = curr_col1.date_input(label="From",value=default_from,key='curr_from')
 curr_to = curr_col2.date_input(label="To",value=default_to,key='curr_to')
 date_range_start, date_range_end, date_range_str = get_dates(curr_from,curr_to,curr_freq)
@@ -507,7 +641,7 @@ for i in range(len(date_range_str)):
     date = pd.to_datetime(np.array(date_range_str[i]))
     current_user_ids = set(df2[(df2['username_persistent']!='Anonymous')&(df2['requested_at'].dt.normalize()>=date[0])&(df2['requested_at'].dt.normalize()<=date[1])]['user_id'])
     raw_numbers.append(len(current_user_ids))
-    l = np.array(active_users(date_range_str[i:],current_user_ids))
+    l = np.array(active_users(date_range_str[i:],[current_user_ids]*len(date_range_str))[0])
     l = list(np.round(l/len(current_user_ids),4)*100)
     data.append(l+[np.nan]*(len(date_range_str)-len(l)))
 #data.append([1]+[np.nan]*(len(date_range_str)-1))
@@ -544,7 +678,7 @@ curr_expander.plotly_chart(fig, use_container_width=True)
 nurr_expander = st.expander("NURR")
 nurr_expander.write("New user retention rate")
 nurr_col1, nurr_col2, nurr_col3 = nurr_expander.columns(3)
-nurr_freq = nurr_col3.selectbox('Frequency',('Weekly', 'Bi-weekly', 'Monthly'), key='nurr_freq')
+nurr_freq = nurr_col3.selectbox('Time frame',('Weekly', 'Bi-weekly', 'Monthly'), key='nurr_freq')
 nurr_from = nurr_col1.date_input(label="From",value=default_from,key='nurr_from')
 nurr_to = nurr_col2.date_input(label="To",value=default_to,key='nurr_to')
 date_range_start, date_range_end, date_range_str = get_dates(nurr_from,nurr_to,nurr_freq)
@@ -555,7 +689,7 @@ for i in range(len(date_range_str)):
     date = pd.to_datetime(np.array(date_range_str[i]))
     new_user_ids = df1[(df1['date_joined'].dt.normalize()>=date[0])&(df1['date_joined'].dt.normalize()<=date[1])]['id']
     raw_numbers.append(len(new_user_ids))
-    l = list(np.round(active_users(date_range_str[i:],new_user_ids)/len(new_user_ids),4)*100)
+    l = list(np.round(active_users(date_range_str[i:],[new_user_ids]*len(date_range_str))[0]/len(new_user_ids),4)*100)
     data.append(l+[np.nan]*(len(date_range_str)-len(l)))
 data = np.array(data)
 
@@ -588,9 +722,9 @@ nurr_expander.plotly_chart(fig, use_container_width=True)
 
 
 # rurr_expander = st.expander("RURR")
-# rurr_expander.write("reactive user retention rate")
+# rurr_expander.write("reactivated user retention rate")
 # rurr_col1, rurr_col2, rurr_col3 = rurr_expander.columns(3)
-# rurr_freq = rurr_col3.selectbox('Frequency',('Weekly', 'Bi-weekly', 'Monthly'), key='rurr_freq')
+# rurr_freq = rurr_col3.selectbox('Time frame',('Weekly', 'Bi-weekly', 'Monthly'), key='rurr_freq')
 # rurr_from = rurr_col1.date_input(label="From",value=default_from,key='rurr_from')
 # rurr_to = rurr_col2.date_input(label="To",value=default_to,key='rurr_to')
 # rurr_yrange = stickiness_expander.slider("Y-axis range", value=(0, 100), min_value=0, max_value=100, step=5, key='rurr_yrange')
@@ -615,26 +749,26 @@ nurr_expander.plotly_chart(fig, use_container_width=True)
 
 
 rurr_expander = st.expander("RURR")
-rurr_expander.write("Reactive user retention rate")
+rurr_expander.write("Reactivated user retention rate")
 rurr_col1, rurr_col2, rurr_col3 = rurr_expander.columns(3)
-rurr_freq = rurr_col3.selectbox('Frequency',('Weekly', 'Bi-weekly', 'Monthly'), key='rurr_freq')
+rurr_freq = rurr_col3.selectbox('Time frame',('Weekly', 'Bi-weekly', 'Monthly'), key='rurr_freq')
 rurr_from = rurr_col1.date_input(label="From",value=default_from,key='rurr_from')
 rurr_to = rurr_col2.date_input(label="To",value=default_to,key='rurr_to')
 date_range_start, date_range_end, date_range_str = get_dates(rurr_from,rurr_to,rurr_freq)
 
-reactive_user_ids = get_reactive_users(date_range_str)
+reactivated_user_ids = get_reactivated_users(date_range_str, reactive_period, inactive_period, previous_active_period)
 
 data = []
 for i in range(len(date_range_str)):
-    active_user_counts = active_users(date_range_str[i:],reactive_user_ids[i])
-    l = list(np.round(active_user_counts/len(reactive_user_ids[i]),4)*100)
+    active_user_counts = active_users(date_range_str[i:],[reactivated_user_ids[i]]*len(date_range_str))[0]
+    l = list(np.round(active_user_counts/len(reactivated_user_ids[i]),4)*100)
     data.append(l+[np.nan]*(len(date_range_str)-len(l)))
 data = np.array(data)
 
 if rurr_freq=='Weekly' or rurr_freq=='Bi-weekly':
-    y = [x[0].strftime('%b %d')+"-"+x[1].strftime('%b %d') + f'        {len(reactive_user_ids[i])}' for i, x in enumerate(zip(date_range_start,date_range_end))]
+    y = [x[0].strftime('%b %d')+"-"+x[1].strftime('%b %d') + f'        {len(reactivated_user_ids[i])}' for i, x in enumerate(zip(date_range_start,date_range_end))]
 else:
-    y = [x.strftime('%Y %b') + f'        {len(reactive_user_ids[i])}' for i, x in enumerate(date_range_end)]
+    y = [x.strftime('%Y %b') + f'        {len(reactivated_user_ids[i])}' for i, x in enumerate(date_range_end)]
 fig = px.imshow(data,
                 labels=dict(x="Period", y="Date", color="Retention Rate (%)"),
                 y=y,
