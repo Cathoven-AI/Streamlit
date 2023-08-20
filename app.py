@@ -1121,12 +1121,9 @@ subscription_user_count, _ = new_subscription_users([[funnel_from.strftime('%Y-%
 fig = go.Figure(go.Funnel(
     y = ["Visitors","Trial Users", "New Users", "New Active Users", "New Subscription Users"],
     x = [visitor_count[0],trial_user_count[0], new_user_count[0], new_active_user_count[0], subscription_user_count[0]],
-    textinfo = "value+percent initial",hoverinfo="x+y+percent initial+percent previous"))
+    textinfo = "value+percent initial",hoverinfo="x+y+percent initial+percent previous",hovertemplate='%{y:.2f}'))
 
 funnel_expander.plotly_chart(fig, use_container_width=True)
-
-
-
 
 
 
