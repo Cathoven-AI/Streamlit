@@ -157,7 +157,7 @@ def visitors(dates):
 
         values += [row.metric_values[-1].value for row in response.rows]
 
-    return np.array(reversed(values))
+    return np.array(list(reversed(values)))
 
 
 @st.cache_data
