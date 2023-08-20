@@ -1108,9 +1108,14 @@ st.divider()
 
 
 funnel_expander = st.expander("Funnel")
-funnel_col1, funnel_col2 = funnel_expander.columns(2)
+funnel_col1, funnel_col2, funnel_col3 = funnel_expander.columns(3)
 funnel_from = funnel_col1.date_input(label="From",value=default_from,key='funnel_from')
 funnel_to = funnel_col2.date_input(label="To",value=default_to,key='funnel_to')
+default_options = ["Visitors","Trial Users", "New Users", "New Active Users", "New Subscription Users"]
+options = funnel_col3.multiselect(
+    'Steps',
+    options = default_options,
+    default = default_options)
 
 visitor_count = visitors([[funnel_from.strftime('%Y-%m-%d'),funnel_to.strftime('%Y-%m-%d')]])
 trial_user_count = trial_users([[funnel_from.strftime('%Y-%m-%d'),funnel_to.strftime('%Y-%m-%d')]])
@@ -1119,8 +1124,8 @@ new_active_user_count, _ = active_users([[funnel_from.strftime('%Y-%m-%d'),funne
 subscription_user_count, _ = new_subscription_users([[funnel_from.strftime('%Y-%m-%d'),funnel_to.strftime('%Y-%m-%d')]])
 
 fig = go.Figure(go.Funnel(
-    y = ["Visitors","Trial Users", "New Users", "New Active Users", "New Subscription Users"],
-    x = [float(visitor_count[0]),trial_user_count[0], new_user_count[0], new_active_user_count[0], subscription_user_count[0]],
+    y = [x for x in default_options if x in options],
+    x = [visitor_count[0],trial_user_count[0], new_user_count[0], new_active_user_count[0], subscription_user_count[0]],
     textinfo = "value+percent initial",hoverinfo="x+y+percent initial+percent previous"))
 
 funnel_expander.plotly_chart(fig, use_container_width=True)
