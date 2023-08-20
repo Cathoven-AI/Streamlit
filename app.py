@@ -137,20 +137,27 @@ def visitors(dates):
     for date in dates:
         date_ranges.append(DateRange(start_date=date[0], end_date=date[1]))
 
-    request = RunReportRequest(
-        property=f"properties/294609234",
-        dimensions=[Dimension(name="eventName")],
-        metrics=[Metric(name="totalUsers")],
-        date_ranges=date_ranges,
-        dimension_filter=FilterExpression(
-            filter=Filter(
-                field_name="eventName",
-                string_filter=Filter.StringFilter(value="first_visit"),
-            )
-        ),
-    )
-    response = client.run_report(request)
-    return np.array(reversed([row.metric_values[-1].value for row in response.rows]))
+    values = []
+
+    for i in range(int((len(date_ranges)-1)//4+1)):
+
+        request = RunReportRequest(
+            property=f"properties/294609234",
+            dimensions=[Dimension(name="eventName")],
+            metrics=[Metric(name="totalUsers")],
+            date_ranges=date_ranges[i*4:(i+1)*4],
+            dimension_filter=FilterExpression(
+                filter=Filter(
+                    field_name="eventName",
+                    string_filter=Filter.StringFilter(value="first_visit"),
+                )
+            ),
+        )
+        response = client.run_report(request)
+
+        values += [row.metric_values[-1].value for row in response.rows]
+
+    return np.array(reversed(values))
 
 
 @st.cache_data
