@@ -1108,11 +1108,11 @@ st.divider()
 
 
 funnel_expander = st.expander("Funnel")
-funnel_col1, funnel_col2, funnel_col3 = funnel_expander.columns(3)
+funnel_col1, funnel_col2 = funnel_expander.columns(2)
 funnel_from = funnel_col1.date_input(label="From",value=default_from,key='funnel_from')
 funnel_to = funnel_col2.date_input(label="To",value=default_to,key='funnel_to')
 default_options = ["Visitors","Trial Users", "New Users", "New Active Users", "New Subscription Users"]
-options = funnel_col3.multiselect(
+options = funnel_expander.multiselect(
     'Steps',
     options = default_options,
     default = default_options)
