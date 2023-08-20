@@ -838,19 +838,19 @@ vu = visitors(date_range_str)
 fig = go.Figure()
 if vu_freq=='Daily':
     x = [x.strftime('%b-%d %a') for x in date_range_end]
-    fig.add_trace(go.Scatter(x=x, y=nsu, name=f'Daily Visitors'))
+    fig.add_trace(go.Scatter(x=x, y=vu, name=f'Daily Visitors'))
     fig.update_layout(xaxis_title='Day',yaxis_title="Visitors")
 elif vu_freq=='Weekly':
     x = [x[0].strftime('%b %d')+"-"+x[1].strftime('%b %d') for x in zip(date_range_start,date_range_end)]
-    fig.add_trace(go.Scatter(x=x, y=nsu, name=f'Weekly Visitors'))
+    fig.add_trace(go.Scatter(x=x, y=vu, name=f'Weekly Visitors'))
     fig.update_layout(xaxis_title='Week',yaxis_title="Visitors")
 elif vu_freq=='Bi-weekly':
     x = [x[0].strftime('%b %d')+"-"+x[1].strftime('%b %d') for x in zip(date_range_start,date_range_end)]
-    fig.add_trace(go.Scatter(x=x, y=nsu, name=f'Bi-weekly Visitors'))
+    fig.add_trace(go.Scatter(x=x, y=vu, name=f'Bi-weekly Visitors'))
     fig.update_layout(xaxis_title='bi-week',yaxis_title="Visitors")
 else:
     x = [x.strftime('%Y %b') for x in date_range_end]
-    fig.add_trace(go.Scatter(x=x, y=nsu, name=f'Monthly Visitors'))
+    fig.add_trace(go.Scatter(x=x, y=vu, name=f'Monthly Visitors'))
     fig.update_layout(xaxis_title='Month',yaxis_title="Visitors")
 
 
@@ -1112,14 +1112,15 @@ funnel_col1, funnel_col2 = funnel_expander.columns(2)
 funnel_from = funnel_col1.date_input(label="From",value=default_from,key='funnel_from')
 funnel_to = funnel_col2.date_input(label="To",value=default_to,key='funnel_to')
 
+visitor_count = visitors([[funnel_from.strftime('%Y-%m-%d'),funnel_to.strftime('%Y-%m-%d')]])
 trial_user_count = trial_users([[funnel_from.strftime('%Y-%m-%d'),funnel_to.strftime('%Y-%m-%d')]])
 new_user_count, new_user_ids = new_users([[funnel_from.strftime('%Y-%m-%d'),funnel_to.strftime('%Y-%m-%d')]])
 new_active_user_count, _ = active_users([[funnel_from.strftime('%Y-%m-%d'),funnel_to.strftime('%Y-%m-%d')]],new_user_ids)
 subscription_user_count, _ = new_subscription_users([[funnel_from.strftime('%Y-%m-%d'),funnel_to.strftime('%Y-%m-%d')]])
 
 fig = go.Figure(go.Funnel(
-    y = ["Trial Users", "New Users", "New Active Users", "New Subscription Users"],
-    x = [trial_user_count[0], new_user_count[0], new_active_user_count[0], subscription_user_count[0]],
+    y = ["Visitors","Trial Users", "New Users", "New Active Users", "New Subscription Users"],
+    x = [visitor_count[0],trial_user_count[0], new_user_count[0], new_active_user_count[0], subscription_user_count[0]],
     textinfo = "value+percent initial",hoverinfo="x+y+percent initial+percent previous"))
 
 funnel_expander.plotly_chart(fig, use_container_width=True)
