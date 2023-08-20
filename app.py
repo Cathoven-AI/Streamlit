@@ -996,6 +996,35 @@ fig.update_yaxes(range=stickiness_yrange)
 stickiness_expander.plotly_chart(fig, use_container_width=True)
 
 
+
+st.divider()
+
+
+funnel_expander = st.expander("Funnel")
+funnel_col1, funnel_col2 = funnel_expander.columns(2)
+funnel_from = funnel_col1.date_input(label="From",value=default_from,key='funnel_from')
+funnel_to = funnel_col2.date_input(label="To",value=default_to,key='funnel_to')
+
+trial_user_count = trial_users([[funnel_from.strftime('%Y-%m-%d'),funnel_to.strftime('%Y-%m-%d')]])
+new_user_count, new_user_ids = new_users([[funnel_from.strftime('%Y-%m-%d'),funnel_to.strftime('%Y-%m-%d')]])
+new_active_user_count, _ = active_users([[funnel_from.strftime('%Y-%m-%d'),funnel_to.strftime('%Y-%m-%d')]],new_user_ids)
+subscription_user_count, _ = new_subscription_users([[funnel_from.strftime('%Y-%m-%d'),funnel_to.strftime('%Y-%m-%d')]])
+
+fig = go.Figure(go.Funnel(
+    y = ["Trial User", "New User", "New Active User", "Subscription User"],
+    x = [trial_user_count[0], new_user_count[0], new_active_user_count[0], subscription_user_count[0]],
+    textinfo = "value+percent initial",))
+
+funnel_expander.plotly_chart(fig, use_container_width=True)
+
+
+
+
+
+
+
+
+
 st.divider()
 
 curr_expander = st.expander("CURR")
