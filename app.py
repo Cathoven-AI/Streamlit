@@ -4,6 +4,17 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import mysql.connector
+from cryptography.fernet import Fernet
+import base64, hashlib, json
+from google.analytics.data_v1beta import BetaAnalyticsDataClient
+from google.analytics.data_v1beta.types import (
+    DateRange,
+    Dimension,
+    Filter,
+    FilterExpression,
+    Metric,
+    RunReportRequest,
+)
 
 @st.cache_data
 def load_data(host,user,password):
@@ -70,6 +81,20 @@ if host!='' and user!='' and password!='':
 else:
     st.stop()
 
+
+
+@st.cache_data
+def get_credentials(password_A):
+    encrypted_password_B = b'gAAAAABk4daq21mdvn4z67VsH5vEyWvgFmtDqgTQaM7o3U_X02wAx2k2yNU1lzgOiIeMshtiHWHcBYXmhn8V2vkokOOw-NG6v0QQ71nxkSwbwJZ7RNVBTh0LMf7XdfW4p8hUiNatDAH60HOQB2AQtgMRUS3JJkR5s9xwYenb1S6SmLk97rsrXK-Qx5zEQynG-fIRQd-6z5SdGmpRKw2n7eUqSuYcsTP_2iwxmzryndC8PcLiUA4yESfUlksjnq2s62Qe0hDtKK2TTgV-pjQKKsuDrS16GZVwtYVPX-W1hiMsKvZGFG3qE1GeF2HzfjXGKGEvZ5EDPQ-ZCTksaE_m3g9vMFWmjBIX0X63ec8NVeTL1AIKWiZ706izYfdiNbF3y0BhVZBFi-SVZ4aRSmnTAxTgve8II3BHozaxvGVFVptFb_JQy-nzrjKwBDWFW0dlSLTG3ILbeN0LuHg_5t8pTWev5YFPfB3Sv5FXUvbuRqtGJvU5aEL7KcmfwP4t0fj3G9iK9NEc5Pk5xXJ-GnO3ziCmRQxikjB-xAwXzYRpSfG5Fmv5X0Ep8q18BpjUz6qg9Buagqzb5iUT4ij_jMLSwjU1w1ebwitSKoyPIVAO6Lvx-SxfWvSYjc8WpEE6ijlEh1xbT9FlRVQDp21KibHnOApPe6LTd4aknOYuc7cJSdIWtPVPOPKg5zE0ogP5uBi2-8yiGBKW4Kk7wWx5JguUgkdq4VgxXd1XaVKo1oTBdBSz7G8cLbnE64499lTece96MiAOIuBlCdZDnIw6v15m_j9PWCOG_nvmWfB9cvX_vLzPbvG2rSVQ5WVM6svnd4HPcoOeAe1Y-C48eBPEBrzYahrVp5-1qKLsXnQP9xPrJIuQH8FmbElxQWrhhndHJAx98orMH2atmbA6WW4fK0IkyEpJ4SW8X5m7rynb2lq9-IdA6BVCn38w0txe5Q4zsLVbe1JVP0nYqplpNCuhOWFv95Fou3wEAqd_j7mIEV7YVLrH-_tW4XTFyVaXJ79ofJhF1-v9PBkdLSxlqvzvxrtDUsbmS6B8DT0Upa0lDrk3Nmm5hxWvzDbicGAB3dO1qcvECs5x3mRyXJhsrNiBuL9HZnIZLCfuyJGG-lFHGLb_wq2_zRdyqLN42XmeSoU06dcGQMCbeKVZUhZmKc3i2i-dAzylhRKyA4Ne1HCYBkQHvTn37GlBc0CxZbfk-jMRjEMcGk4ulhQ0kGrlZiWbtro_Pe4HJ-P2R29rTCn4GboI_ij9gwdDr_D-2AePvEDTpRD1HfXb6dCYGv6uCwnermPvJCj6N1_tMoiXqJmeZLwYCky0KQzjQkSYpEQ6uqDRqYVNV4thPneKBxD9FTMYe9v7lA4e7Kq2X4J1ObVZKAYZsEiLWNkyG3NiDsaM97ws0d6aU2VBJ3EVkHOKkn_mcsk2l4nI9TYnp5GbHCJA34w0fTezX9IcPFu8ueeGypB8stypNG1yKjhcPS2Vs8eL5nID2ySMUkNIRooVW1qHE8-vOxyqSEagMB_TilWs7Y07dzsO_l0cH69DsFkbe11m47VgrPrWtvcTI5ao9B39gf3E40PBkfPWuRRRIA32KlLBTXPsV0ogX295I34JUsgh1kbiN1KULR7jTzw7R6RR3Pd3F2le3Iy53QfwdID8Rp3KQEJ4uWLllqMf5h6YrSiKjQs1MeHrQ02gCyYHAwTBG7z14nfEN9-IbQu8kczreI5bUvoa4vyLJjshD7WMrz2kzF7buEcM6LNG61u7WIyZQmHE9aOFwglNkzRs7-ji6_Toe7oVN_kCJQEKGDdkJYbw09JDZE_z4x0aBPxZcG_AEZOhm4r_BI9aETLE-g1s3HEREJXcVP6D9yVsJ6PBPYbp5Fvmue83bCCUzO6gGIvnaaT2hpcvXek2ptIxN0VOgSTNIHnQLAYh9X9IM4fc0wP_l7-xdb6okSEmzzxY9sJbmN1fdu_gfCncmAhdLLDaLRHu9IsGTOPkJwOidb3wanIPY1pY4AtxW1nrG14TcRptu9uetE71xwxKY9LbX3KjrWzcOLdwfNzOfRQz58jOQNd8xbWF-kWWER9yEHoELrPm0jTgkQLoLPJfYV_-W88YFZ891Foeb2uJOjElDbzohhAkZNA8HHDo-1gR8wCbEhPau4k3za1PuFCp42Pq7Of-6cgOVVGPaTKoPWotR7DpMjYOM7CCP14RHZ0jOpv-ShGV__55jymQGuE9D3AXeLtfVSaHjgbSXexQS5DAZyHrSMc2fPulhVrh0RBUkV1ZuOJDq-NngtYd9KjXRAyJ0QZzoD1AXe3IJXhcX-uv-kUAlViztLU602j4HIL_o_lI8HEnwYrYYdLfnIW7t2ltYvVC99Qs0_up8stNtJOhyPnNMEMqboZfg5kzDOJxSlB9fPtoTq1Dcq4MzYsJvOJObqmL3uZ-PmrIII2kEr1A2jgUOu3fofCugPpmQQxJjhP_i26klvSDW0czeWmzZc64FcB6YhsBBqXbZjStfk06LOeXJlVf25t4H7cX2huWeN94RLXM7SHnx-PC4IE-T4c9D4uZHjzDKq04VcHppAqw0gCsXHFH6TVFQfJUJ9qnWfI0m4grQdS7YsRqlAFIYgQWmotzWA1Gs6aIKUSfx2oNwO3gBw3MN9i0BreVJhOq1ryh-kwh1t4DNKY_NHQk4ztYc9V9Qj7WNy79gDhmlXwHhsiG5RieBrmInjGzCfQtmrAz5cEpKkmzS_wKwyXOftmsGXP4a5fabgtmxJv6xhGR2uc_Saz4LDFcaPrVf76uP0ZvU97zqjBXZVhEurGqV7GcL6TbEJbozwni29tSEb_6XvQzaQd74__21tjqRHj_JxvosmOnHTqoYk_WpuAHZrhTq8zAFavqHXSPZ5ybmvB1_iy0880UbuCspEz202TTif30V2WUOHkRsbikUt-9uCjwrygAbTol8-dwiMfoAGzmsQHIiVAhOhDn6kdwcIGnJC57wPohfHQHWZxkKFt-ZsV1oU2APNeCx2CusQAgeWvbwm-NbfosEsr7zWmvr6JciCDlT9MpA-vIb4rIjfQUbS1VkQd5AxBHePOSe8zwEoGjJzCUxyWSOMTBO2v7745mYL3smGECROq2-WR3FOz-xJzLbMAkiaviV86q65xUOXMYiGzX2ip5eHcvouOAP3BUynBzOYwwfc1e-nxa0CZXoEqLIUBZBhNAnkwJeSuO41tmdD21NxMuV6IF2HEzvZDekqcYrZ14Fw67kyNJK4ED4KKoPSzSTQdktzPbcuwO5CrB1J433DOGA0PkgWGjhEBnFXcXpA=='
+    hlib = hashlib.md5()
+    hlib.update(password_A.encode())
+    encoded_password = base64.urlsafe_b64encode(hlib.hexdigest().encode('latin-1'))
+    cipher_suite = Fernet(encoded_password)
+    return cipher_suite.decrypt(encrypted_password_B).decode()
+
+
+
+
 st.sidebar.divider()
 st.sidebar.subheader("Settings")
 
@@ -101,6 +126,31 @@ if show_trends:
     weekly_window_size = trend_settings_expander.number_input("Weekly",value=6,min_value=2,max_value=12,step=1,key="weekly_window_size")
     biweekly_window_size = trend_settings_expander.number_input("Bi-weekly",value=4,min_value=2,max_value=12,step=1,key="biweekly_window_size")
     monthly_window_size = trend_settings_expander.number_input("Monthly",value=3,min_value=2,max_value=12,step=1,key="monthly_window_size")
+
+
+@st.cache_data
+def visitors(dates):
+    password_B = get_credentials(host+user+password)
+    client = BetaAnalyticsDataClient().from_service_account_info(json.loads(password_B))
+
+    date_ranges = []
+    for date in dates:
+        date_ranges.append(DateRange(start_date=date[0], end_date=date[1]))
+
+    request = RunReportRequest(
+        property=f"properties/294609234",
+        dimensions=[Dimension(name="eventName")],
+        metrics=[Metric(name="totalUsers")],
+        date_ranges=date_ranges,
+        dimension_filter=FilterExpression(
+            filter=Filter(
+                field_name="eventName",
+                string_filter=Filter.StringFilter(value="first_visit"),
+            )
+        ),
+    )
+    response = client.run_report(request)
+    return np.array(reversed([row.metric_values[-1].value for row in response.rows]))
 
 
 @st.cache_data
@@ -767,6 +817,56 @@ tu_expander.plotly_chart(fig, use_container_width=True)
 
 
 
+vu_expander = st.expander("Visitors")
+vu_col1, vu_col2, vu_col3 = vu_expander.columns(3)
+vu_from = vu_col1.date_input(label="From",value=default_from,key='vu_from')
+vu_to = vu_col2.date_input(label="To",value=default_to,key='vu_to')
+vu_freq = vu_col3.selectbox('Time frame',('Daily', 'Weekly', 'Bi-weekly', 'Monthly'),index=1,key='vu_freq')
+vu_yrange = vu_expander.slider("Y-axis range", value=(0, 500), min_value=0, max_value=10000, step=50, key='vu_yrange')
+
+date_range_start, date_range_end, date_range_str = get_dates(vu_from,vu_to,vu_freq)
+
+vu = visitors(date_range_str)
+
+fig = go.Figure()
+if vu_freq=='Daily':
+    x = [x.strftime('%b-%d %a') for x in date_range_end]
+    fig.add_trace(go.Scatter(x=x, y=nsu, name=f'Daily Visitors'))
+    fig.update_layout(xaxis_title='Day',yaxis_title="Visitors")
+elif vu_freq=='Weekly':
+    x = [x[0].strftime('%b %d')+"-"+x[1].strftime('%b %d') for x in zip(date_range_start,date_range_end)]
+    fig.add_trace(go.Scatter(x=x, y=nsu, name=f'Weekly Visitors'))
+    fig.update_layout(xaxis_title='Week',yaxis_title="Visitors")
+elif vu_freq=='Bi-weekly':
+    x = [x[0].strftime('%b %d')+"-"+x[1].strftime('%b %d') for x in zip(date_range_start,date_range_end)]
+    fig.add_trace(go.Scatter(x=x, y=nsu, name=f'Bi-weekly Visitors'))
+    fig.update_layout(xaxis_title='bi-week',yaxis_title="Visitors")
+else:
+    x = [x.strftime('%Y %b') for x in date_range_end]
+    fig.add_trace(go.Scatter(x=x, y=nsu, name=f'Monthly Visitors'))
+    fig.update_layout(xaxis_title='Month',yaxis_title="Visitors")
+
+
+if show_trends:
+    if vu_freq=='Daily':
+        extra_range_start, extra_range_end, extra_range_str = get_dates(vu_from-pd.Timedelta(days=daily_window_size-1),vu_from,vu_freq)
+        vu_trend = moving_average(list(visitors(extra_range_str,duration)[0])+list(vu),window_size=daily_window_size)[-len(vu):]
+    elif vu_freq=='Weekly':
+        extra_range_start, extra_range_end, extra_range_str = get_dates(vu_from-pd.Timedelta(days=(weekly_window_size-1)*7),vu_from,vu_freq)
+        vu_trend = moving_average(list(visitors(extra_range_str,duration)[0])+list(vu),window_size=weekly_window_size)[-len(vu):]
+    elif vu_freq=='Bi-weekly':
+        extra_range_start, extra_range_end, extra_range_str = get_dates(vu_from-pd.Timedelta(days=(biweekly_window_size-1)*14),vu_from,vu_freq)
+        vu_trend = moving_average(list(visitors(extra_range_str,duration)[0])+list(vu),window_size=biweekly_window_size)[-len(vu):]
+    else:
+        extra_range_start, extra_range_end, extra_range_str = get_dates(vu_from-pd.Timedelta(days=(monthly_window_size-1)*31),vu_from,vu_freq)
+        vu_trend = moving_average(list(visitors(extra_range_str,duration)[0])+list(vu),window_size=monthly_window_size)[-len(vu):]
+    fig.add_trace(go.Scatter(x=x, y=vu_trend, name='Trend', line=dict(color='firebrick', dash='dash')))
+
+fig.update_layout(legend=dict(yanchor="top",y=1.2,xanchor="left",x=0.01))
+fig.update_yaxes(range=vu_yrange)
+vu_expander.plotly_chart(fig, use_container_width=True)
+
+
 
 
 
@@ -1011,9 +1111,9 @@ new_active_user_count, _ = active_users([[funnel_from.strftime('%Y-%m-%d'),funne
 subscription_user_count, _ = new_subscription_users([[funnel_from.strftime('%Y-%m-%d'),funnel_to.strftime('%Y-%m-%d')]])
 
 fig = go.Figure(go.Funnel(
-    y = ["Trial User", "New User", "New Active User", "New Subscription User"],
+    y = ["Trial Users", "New Users", "New Active Users", "New Subscription Users"],
     x = [trial_user_count[0], new_user_count[0], new_active_user_count[0], subscription_user_count[0]],
-    textinfo = "value+percent initial",))
+    textinfo = "value+percent initial",hoverinfo="x+y+percent initial+percent previous"))
 
 funnel_expander.plotly_chart(fig, use_container_width=True)
 
