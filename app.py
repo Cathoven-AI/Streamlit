@@ -917,19 +917,19 @@ else:
 if show_trends:
     if rgr_freq=='Daily':
         extra_range_start, extra_range_end, extra_range_str = get_dates(rgr_from-pd.Timedelta(days=daily_window_size-1),rgr_from,rgr_freq)
-        extra_rgr = np.round(activation_rate(extra_range_str)*100,2)
+        extra_rgr = np.round((new_users(extra_range_str)[0]/trial_users(extra_range_str))*100,2)
         rgr_trend = moving_average(list(extra_rgr)+list(rgr),window_size=daily_window_size)[-len(rgr):]
     elif rgr_freq=='Weekly':
         extra_range_start, extra_range_end, extra_range_str = get_dates(rgr_from-pd.Timedelta(days=(weekly_window_size-1)*7),rgr_from,rgr_freq)
-        extra_rgr = np.round(activation_rate(extra_range_str)*100,2)
+        extra_rgr = np.round((new_users(extra_range_str)[0]/trial_users(extra_range_str))*100,2)
         rgr_trend = moving_average(list(extra_rgr)+list(rgr),window_size=weekly_window_size)[-len(rgr):]
     elif rgr_freq=='Bi-weekly':
         extra_range_start, extra_range_end, extra_range_str = get_dates(rgr_from-pd.Timedelta(days=(biweekly_window_size-1)*14),rgr_from,rgr_freq)
-        extra_rgr = np.round(activation_rate(extra_range_str)*100,2)
+        extra_rgr = np.round((new_users(extra_range_str)[0]/trial_users(extra_range_str))*100,2)
         rgr_trend = moving_average(list(extra_rgr)+list(rgr),window_size=biweekly_window_size)[-len(rgr):]
     else:
         extra_range_start, extra_range_end, extra_range_str = get_dates(rgr_from-pd.Timedelta(days=(monthly_window_size-1)*31),rgr_from,rgr_freq)
-        extra_rgr = np.round(activation_rate(extra_range_str)*100,2)
+        extra_rgr = np.round((new_users(extra_range_str)[0]/trial_users(extra_range_str))*100,2)
         rgr_trend = moving_average(list(extra_rgr)+list(rgr),window_size=monthly_window_size)[-len(rgr):]
     fig.add_trace(go.Scatter(x=x, y=rgr_trend, name='Trend', line=dict(color='firebrick', dash='dash')))
 
