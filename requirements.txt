@@ -3,3 +3,5 @@ pandas
 plotly
 mysql-connector-python
 streamlit
+cryptography
+google-analytics-data
