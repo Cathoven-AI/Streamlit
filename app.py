@@ -1011,7 +1011,7 @@ new_active_user_count, _ = active_users([[funnel_from.strftime('%Y-%m-%d'),funne
 subscription_user_count, _ = new_subscription_users([[funnel_from.strftime('%Y-%m-%d'),funnel_to.strftime('%Y-%m-%d')]])
 
 fig = go.Figure(go.Funnel(
-    y = ["Trial User", "New User", "New Active User", "Subscription User"],
+    y = ["Trial User", "New User", "New Active User", "New Subscription User"],
     x = [trial_user_count[0], new_user_count[0], new_active_user_count[0], subscription_user_count[0]],
     textinfo = "value+percent initial",))
 
