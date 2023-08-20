@@ -1108,14 +1108,13 @@ st.divider()
 
 
 funnel_expander = st.expander("Funnel")
-funnel_col1, funnel_col2 = funnel_expander.columns(2)
+funnel_col1, funnel_col2, funnel_col3 = funnel_expander.columns(3)
 funnel_from = funnel_col1.date_input(label="From",value=default_from,key='funnel_from')
 funnel_to = funnel_col2.date_input(label="To",value=default_to,key='funnel_to')
+funnal_percentage = funnel_col3.selectbox("Show percentage of",('Initial step', 'Previous step'),value=True,key='funnel_percentage')
+
 default_options = ["Visitors","Trial Users", "New Users", "New Active Users", "New Subscription Users"]
-options = funnel_expander.multiselect(
-    'Steps',
-    options = default_options,
-    default = default_options)
+options = funnel_expander.multiselect('Steps',options = default_options,default = default_options)
 
 visitor_count = visitors([[funnel_from.strftime('%Y-%m-%d'),funnel_to.strftime('%Y-%m-%d')]])
 trial_user_count = trial_users([[funnel_from.strftime('%Y-%m-%d'),funnel_to.strftime('%Y-%m-%d')]])
@@ -1124,12 +1123,16 @@ new_active_user_count, _ = active_users([[funnel_from.strftime('%Y-%m-%d'),funne
 subscription_user_count, _ = new_subscription_users([[funnel_from.strftime('%Y-%m-%d'),funnel_to.strftime('%Y-%m-%d')]])
 
 x = [visitor_count[0],trial_user_count[0], new_user_count[0], new_active_user_count[0], subscription_user_count[0]]
-
-fig = go.Figure(go.Funnel(
-    y = [z for z in default_options if z in options],
-    x = [x[i] for i,z in enumerate(default_options) if z in options],
-    textinfo = "value+percent initial",hoverinfo="x+y+percent initial+percent previous"))
-
+if funnal_percentage=='Initial step':
+    fig = go.Figure(go.Funnel(
+        y = [z for z in default_options if z in options],
+        x = [x[i] for i,z in enumerate(default_options) if z in options],
+        textinfo = "value+percent initial",hoverinfo="x+y+percent initial+percent previous"))
+else:
+    fig = go.Figure(go.Funnel(
+        y = [z for z in default_options if z in options],
+        x = [x[i] for i,z in enumerate(default_options) if z in options],
+        textinfo = "value+percent previous",hoverinfo="x+y+percent initial+percent previous"))
 funnel_expander.plotly_chart(fig, use_container_width=True)
 
 
