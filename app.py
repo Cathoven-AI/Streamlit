@@ -857,16 +857,16 @@ else:
 if show_trends:
     if vu_freq=='Daily':
         extra_range_start, extra_range_end, extra_range_str = get_dates(vu_from-pd.Timedelta(days=daily_window_size-1),vu_from,vu_freq)
-        vu_trend = moving_average(list(visitors(extra_range_str,duration)[0])+list(vu),window_size=daily_window_size)[-len(vu):]
+        vu_trend = moving_average(list(visitors(extra_range_str)[0])+list(vu),window_size=daily_window_size)[-len(vu):]
     elif vu_freq=='Weekly':
         extra_range_start, extra_range_end, extra_range_str = get_dates(vu_from-pd.Timedelta(days=(weekly_window_size-1)*7),vu_from,vu_freq)
-        vu_trend = moving_average(list(visitors(extra_range_str,duration)[0])+list(vu),window_size=weekly_window_size)[-len(vu):]
+        vu_trend = moving_average(list(visitors(extra_range_str)[0])+list(vu),window_size=weekly_window_size)[-len(vu):]
     elif vu_freq=='Bi-weekly':
         extra_range_start, extra_range_end, extra_range_str = get_dates(vu_from-pd.Timedelta(days=(biweekly_window_size-1)*14),vu_from,vu_freq)
-        vu_trend = moving_average(list(visitors(extra_range_str,duration)[0])+list(vu),window_size=biweekly_window_size)[-len(vu):]
+        vu_trend = moving_average(list(visitors(extra_range_str)[0])+list(vu),window_size=biweekly_window_size)[-len(vu):]
     else:
         extra_range_start, extra_range_end, extra_range_str = get_dates(vu_from-pd.Timedelta(days=(monthly_window_size-1)*31),vu_from,vu_freq)
-        vu_trend = moving_average(list(visitors(extra_range_str,duration)[0])+list(vu),window_size=monthly_window_size)[-len(vu):]
+        vu_trend = moving_average(list(visitors(extra_range_str)[0])+list(vu),window_size=monthly_window_size)[-len(vu):]
     fig.add_trace(go.Scatter(x=x, y=vu_trend, name='Trend', line=dict(color='firebrick', dash='dash')))
 
 fig.update_layout(legend=dict(yanchor="top",y=1.2,xanchor="left",x=0.01))
