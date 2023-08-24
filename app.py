@@ -67,6 +67,16 @@ def load_data(host,user,password):
 
     return df1, df2, df_pro
 
+@st.cache_data
+def get_credentials(password_A):
+    encrypted_password_B = 'gAAAAABk4d082reg_muIcxJB9NKMZyE_B9M8xYiU6uNmfdCluzd_x--wX4mG3PyXV8zINM2S6op19wF52PuJAuCgcVDnRFPKn3xPRqhlaCqWlYEPzEnFGclPQHnbEvc4_DUE4n46sSd80_n2m_NzmMlO4V0Zml2_ghGfxS8hJz05Z2C-wnbq0lslSuODua312-sbPTlKu-zNJr4lky-X3r0AXc5XmvUsw76jAgsGPMFuHrQrROGOkGLgF7KBT-rXEmTOUH7PKd7HT1MWvA6T9R6eqwWEFnqHgyg39MT95YFn8h5kH1-8u9lksOwFeD1Qbj9tOOmpJi7zKLDOJOCMDUOfwd7htMUzeu62vEYvlVN6Konk8CknYbyBxVOrO0VW8ikja6FKz5d_sU34y9WTRVafGd3y67079-2Oyql8YFqf8-QC4y2KZopm46eaYV4ixMKTYtHiINph8yB9onvaYwYHKIRAJGtf-FN54_uHhBxkt2mPWASdRmixLcvx-km5_3y7y45dUMdJ7EVmGuVkwAZqCvkuCsUsxllppXg0a8yZT9EKTCXFzaV7RfE_uECPk--XPLKm1piIdcZpAxYgBloLUO1HMdq7jlrYNw_Mmt8D1RlQQ9XjZwtVGTmzOT2B0ZxibplBqE0ZAK7tCrYJSTY4yJ9SI7DvWk4AGzMW5DUXrthMGLx1WTB-rsVElz4F-ubC_JgTCRJdBX5kBQDEjbpYzG4j0Mm-ycQOuo7QbumBOa1uGfeytceGeIkcVv1iHgo3cfz7arjvcY15sUd9q4U93fq0wDkYg16Wd4cHhdwDUT05TKiGjA7_iYSa9K3Y_mCHfyD6TG-5ToKCGm8lnOkkWOwjRFCnrRZH8g2fYgmgEECJpxjZ0pZgoajhyAo7yhyx2faPCU2Y-MooUDe5GFcrQ57hX_AgkwxRB0rPeLUrx3jwH9oUJz56jhqrTT4gsq67WYnCAiGNtZ585tAfAGgTZp_N9u6dO9OzJiMcdIOMFHWjNkxT-QFgxt8Bh3_LvYSqfetTXOeHQuSt8cC8kU-_jKTJ_Y4Z3wGZ_D56a4hVfqDQmvYjnc74lA00_mlzPElBHVDrOCYp3EJUc5ZEjybRxDGd3tTwy4viBQSxDd__uKdcFz0W7ODaJKcX4AqIdXZDN_UGqYJdNodHYSFqLH7LlNvJ9Pzx7-giiK22bmY6Xgi68AKsnpE1YdNQ7UimSEZFOMsYaLBjvADPSry0vgy3qxbmNFb-k2_DcEA5evXw7JJR4rjpZtC50IGDzSj1qciculujZibMJLy96PyP-xRn8T703QujhVhWJk7oqw77XHRwsoajju4AIgkTC8NNks5R4WWn3sk4omLbdB7shzvBRFIAH5EdplNTYHBSBkLlsE6OaKs_G2q3RUnHj7uHTUd6hAKndKaRQynvPvKv_BbyCOU9nFYNO9jC7jirFPD__nXK-h_xmWehXYJIK8abyN7hxvyz3uxnPrIqkURUIvbfK86Cg8-yXGgu9P6fUvOSug6Sz9EETa_pDvjhBeYja9Xgv7gSYRf3brkobCtu-ASn83y3spYjDna1CL7Z_PyIwLJ1_DEzD6mc5a0_Pnoqz8p5N6O6_H8wVszjQaT95fEcZOoqo0AzKEyZu-pQayYDHZx2kEJx4W9M9F-zBiZdja8538IbDABNvDj6YJtzhRW64NyE1NABKNSQDLxpQZl373yhWJNR03ZxvryKE5illeKDdGYf8eUg7_V2P__kgv2Z_rWUR0pHGvX7OffnI1GjEVQc_bjtlrrpeY3870qPZWc5ZWIFRTATZa63jhpP857qy07BtZ2dxaL4ZIT1b05E8_ydnk1makGkwHh_hbhGe4kNZG0Zy_yEyW5Rrsdg3LNa-guu3XfXAyXr-jGusvoka-rUkciBRt9KuzrSG8zEervn0w-ISISXWjbZUgSRGddKogbULp_M5ykEI4LRaS8jMvom3lnEIhctcK9M1B07KQC5x_F9JNwRWytrE5UJEZ8qdMbT5lHyZzuHFiVr_d2JF2K2MppXV_U495jQkjkm69EBqhhTN3-WQPYnYbQwe0ZCITO1Q9j3Gt4tgV0m36JyIYfwpYnGBiPS2pl3dk7lfAnbHNFYxqlcnuARWf5_6BD1vLpFuZtae5Y4huanU-WCKfMOr8aBY9ZsFzbMGGwV7n2bcZfV4SIeBGIGP_mRLuiaf6Pn3Omrfn_zrP4oGVBRszo-Vd58AJRYL28_IPDU6-nQ9zvEiGDvpm95uEkcu0u7jrlzT0M8qfriQm_e-t7dSdTe51BJdSZJnNOiGn0Gi-nfhKEN_wKGimh_FbZVON2dY1dl75xRMJgZNhWyPbHISikwlkTQhbg9_CrucLT8uL2ROvqfzIh9kU56laFEShhX8k9aE3VcLROjxCFQUs1ocTscIfQGrHdsLNlCjPBgzXO_WjuBnpjc7OZSUS-t4d6xVVTeYxuiNFUi1JGw2787_Led8h7Ll9OjdcQbHOpxskKqXjl3IOCdupGnxONtZ8GwubMy1-c76OwvW-124ibeoya4F2bgj_QVMjgkEhKEKzoX2750hS0Q37PIqnqQTeVELCsYHxOc0taX67PnbwPAzW16YpZC6DiYmfoHFjLoX6myctOQSgpyevvlxwLoMUNEFk4U96JPmnMX3EZmB3qGKe-XP3eWtX-myFCuNKyvyRqJjbBPHrSb5CjhtJmUe8t7ShUnMxtKyRYL6KkDTefDlWcBFOmwJ3xxlHKoTV4GE6t0LT9YYktL1jivyKEWtAECSVF_K0dvqPsV2nR9H3tsuKGO-LwSzThkCrQQL5gXGyAikUfVQxMtjmrR3nOE48Pe8xnDdO4nbc6c9M3iWjsF2Uz_D5ouoAN1lkpSzFk1l_J3wWg-x_KELxXuG8YIgCJoDTnfh7THTeTQxkD7WyV0idcQuHnUzpx1b7uSW691SUDUPYjjS70RrYL4brACSNlu-PGULv8_IEqbk1v2X9-8vGT6AkkNizw4mRlIRooDo6eLb5EFLDUopiu_cIJaqXbC3dvVAhwewiOkSzPQBUUoNf8Az5vAULHA3DbA0yXP41QUl_a-AJJXzGckcPvQYueR01HpCcCe0NR_h3ur4-H-Eu5OrRsHnojxGX4hrfnW_vTAsOpBiBnjR_9lSK2u6FNPQVt6ZRChVkoQ2TtwsMWNhNAuQOOkUHeMPF2FtWo8KxaAuim_lFM9nxdpxM8SnaUM0AQeMmBg1mj1ZDTJXZK3dS6aoHv0pmCK7lv7sRoKqzgWOmxY5kxxfTQk5VzggwgAfiFKoQT49A=='.encode()
+    hlib = hashlib.md5()
+    hlib.update(password_A.encode())
+    encoded_password = base64.urlsafe_b64encode(hlib.hexdigest().encode('latin-1'))
+    cipher_suite = Fernet(encoded_password)
+    return cipher_suite.decrypt(encrypted_password_B).decode()
+
+
 st.sidebar.subheader("Credentials")
 host = st.sidebar.text_input('host')
 user = st.sidebar.text_input('user')
@@ -75,6 +85,7 @@ password = st.sidebar.text_input('password',type='password')
 if host!='' and user!='' and password!='':
     try:
         df1, df2, df_pro = load_data(host,user,password)
+        client = BetaAnalyticsDataClient().from_service_account_info(json.loads(get_credentials(host+user+password)))
     except Exception as e:
         st.warning(e)
         st.stop()
@@ -84,13 +95,31 @@ else:
 
 
 @st.cache_data
-def get_credentials(password_A):
-    encrypted_password_B = 'gAAAAABk4d082reg_muIcxJB9NKMZyE_B9M8xYiU6uNmfdCluzd_x--wX4mG3PyXV8zINM2S6op19wF52PuJAuCgcVDnRFPKn3xPRqhlaCqWlYEPzEnFGclPQHnbEvc4_DUE4n46sSd80_n2m_NzmMlO4V0Zml2_ghGfxS8hJz05Z2C-wnbq0lslSuODua312-sbPTlKu-zNJr4lky-X3r0AXc5XmvUsw76jAgsGPMFuHrQrROGOkGLgF7KBT-rXEmTOUH7PKd7HT1MWvA6T9R6eqwWEFnqHgyg39MT95YFn8h5kH1-8u9lksOwFeD1Qbj9tOOmpJi7zKLDOJOCMDUOfwd7htMUzeu62vEYvlVN6Konk8CknYbyBxVOrO0VW8ikja6FKz5d_sU34y9WTRVafGd3y67079-2Oyql8YFqf8-QC4y2KZopm46eaYV4ixMKTYtHiINph8yB9onvaYwYHKIRAJGtf-FN54_uHhBxkt2mPWASdRmixLcvx-km5_3y7y45dUMdJ7EVmGuVkwAZqCvkuCsUsxllppXg0a8yZT9EKTCXFzaV7RfE_uECPk--XPLKm1piIdcZpAxYgBloLUO1HMdq7jlrYNw_Mmt8D1RlQQ9XjZwtVGTmzOT2B0ZxibplBqE0ZAK7tCrYJSTY4yJ9SI7DvWk4AGzMW5DUXrthMGLx1WTB-rsVElz4F-ubC_JgTCRJdBX5kBQDEjbpYzG4j0Mm-ycQOuo7QbumBOa1uGfeytceGeIkcVv1iHgo3cfz7arjvcY15sUd9q4U93fq0wDkYg16Wd4cHhdwDUT05TKiGjA7_iYSa9K3Y_mCHfyD6TG-5ToKCGm8lnOkkWOwjRFCnrRZH8g2fYgmgEECJpxjZ0pZgoajhyAo7yhyx2faPCU2Y-MooUDe5GFcrQ57hX_AgkwxRB0rPeLUrx3jwH9oUJz56jhqrTT4gsq67WYnCAiGNtZ585tAfAGgTZp_N9u6dO9OzJiMcdIOMFHWjNkxT-QFgxt8Bh3_LvYSqfetTXOeHQuSt8cC8kU-_jKTJ_Y4Z3wGZ_D56a4hVfqDQmvYjnc74lA00_mlzPElBHVDrOCYp3EJUc5ZEjybRxDGd3tTwy4viBQSxDd__uKdcFz0W7ODaJKcX4AqIdXZDN_UGqYJdNodHYSFqLH7LlNvJ9Pzx7-giiK22bmY6Xgi68AKsnpE1YdNQ7UimSEZFOMsYaLBjvADPSry0vgy3qxbmNFb-k2_DcEA5evXw7JJR4rjpZtC50IGDzSj1qciculujZibMJLy96PyP-xRn8T703QujhVhWJk7oqw77XHRwsoajju4AIgkTC8NNks5R4WWn3sk4omLbdB7shzvBRFIAH5EdplNTYHBSBkLlsE6OaKs_G2q3RUnHj7uHTUd6hAKndKaRQynvPvKv_BbyCOU9nFYNO9jC7jirFPD__nXK-h_xmWehXYJIK8abyN7hxvyz3uxnPrIqkURUIvbfK86Cg8-yXGgu9P6fUvOSug6Sz9EETa_pDvjhBeYja9Xgv7gSYRf3brkobCtu-ASn83y3spYjDna1CL7Z_PyIwLJ1_DEzD6mc5a0_Pnoqz8p5N6O6_H8wVszjQaT95fEcZOoqo0AzKEyZu-pQayYDHZx2kEJx4W9M9F-zBiZdja8538IbDABNvDj6YJtzhRW64NyE1NABKNSQDLxpQZl373yhWJNR03ZxvryKE5illeKDdGYf8eUg7_V2P__kgv2Z_rWUR0pHGvX7OffnI1GjEVQc_bjtlrrpeY3870qPZWc5ZWIFRTATZa63jhpP857qy07BtZ2dxaL4ZIT1b05E8_ydnk1makGkwHh_hbhGe4kNZG0Zy_yEyW5Rrsdg3LNa-guu3XfXAyXr-jGusvoka-rUkciBRt9KuzrSG8zEervn0w-ISISXWjbZUgSRGddKogbULp_M5ykEI4LRaS8jMvom3lnEIhctcK9M1B07KQC5x_F9JNwRWytrE5UJEZ8qdMbT5lHyZzuHFiVr_d2JF2K2MppXV_U495jQkjkm69EBqhhTN3-WQPYnYbQwe0ZCITO1Q9j3Gt4tgV0m36JyIYfwpYnGBiPS2pl3dk7lfAnbHNFYxqlcnuARWf5_6BD1vLpFuZtae5Y4huanU-WCKfMOr8aBY9ZsFzbMGGwV7n2bcZfV4SIeBGIGP_mRLuiaf6Pn3Omrfn_zrP4oGVBRszo-Vd58AJRYL28_IPDU6-nQ9zvEiGDvpm95uEkcu0u7jrlzT0M8qfriQm_e-t7dSdTe51BJdSZJnNOiGn0Gi-nfhKEN_wKGimh_FbZVON2dY1dl75xRMJgZNhWyPbHISikwlkTQhbg9_CrucLT8uL2ROvqfzIh9kU56laFEShhX8k9aE3VcLROjxCFQUs1ocTscIfQGrHdsLNlCjPBgzXO_WjuBnpjc7OZSUS-t4d6xVVTeYxuiNFUi1JGw2787_Led8h7Ll9OjdcQbHOpxskKqXjl3IOCdupGnxONtZ8GwubMy1-c76OwvW-124ibeoya4F2bgj_QVMjgkEhKEKzoX2750hS0Q37PIqnqQTeVELCsYHxOc0taX67PnbwPAzW16YpZC6DiYmfoHFjLoX6myctOQSgpyevvlxwLoMUNEFk4U96JPmnMX3EZmB3qGKe-XP3eWtX-myFCuNKyvyRqJjbBPHrSb5CjhtJmUe8t7ShUnMxtKyRYL6KkDTefDlWcBFOmwJ3xxlHKoTV4GE6t0LT9YYktL1jivyKEWtAECSVF_K0dvqPsV2nR9H3tsuKGO-LwSzThkCrQQL5gXGyAikUfVQxMtjmrR3nOE48Pe8xnDdO4nbc6c9M3iWjsF2Uz_D5ouoAN1lkpSzFk1l_J3wWg-x_KELxXuG8YIgCJoDTnfh7THTeTQxkD7WyV0idcQuHnUzpx1b7uSW691SUDUPYjjS70RrYL4brACSNlu-PGULv8_IEqbk1v2X9-8vGT6AkkNizw4mRlIRooDo6eLb5EFLDUopiu_cIJaqXbC3dvVAhwewiOkSzPQBUUoNf8Az5vAULHA3DbA0yXP41QUl_a-AJJXzGckcPvQYueR01HpCcCe0NR_h3ur4-H-Eu5OrRsHnojxGX4hrfnW_vTAsOpBiBnjR_9lSK2u6FNPQVt6ZRChVkoQ2TtwsMWNhNAuQOOkUHeMPF2FtWo8KxaAuim_lFM9nxdpxM8SnaUM0AQeMmBg1mj1ZDTJXZK3dS6aoHv0pmCK7lv7sRoKqzgWOmxY5kxxfTQk5VzggwgAfiFKoQT49A=='.encode()
-    hlib = hashlib.md5()
-    hlib.update(password_A.encode())
-    encoded_password = base64.urlsafe_b64encode(hlib.hexdigest().encode('latin-1'))
-    cipher_suite = Fernet(encoded_password)
-    return cipher_suite.decrypt(encrypted_password_B).decode()
+def queryAnalytics(dates,dimentions,metrics,and_filters=None):
+   
+    date_ranges = []
+    for date in dates:
+        date_ranges.append(DateRange(start_date=date[0], end_date=date[1]))
+
+    for i in range(int((len(date_ranges)-1)//4+1)):
+        request = RunReportRequest(
+            property=f"properties/294609234",
+            dimensions=[Dimension(name=x) for x in dimentions],
+            metrics=[Metric(name=x) for x in metrics],
+            date_ranges=date_ranges,
+            dimension_filter=FilterExpression(
+                filter=Filter(
+                    field_name="eventName",
+                    string_filter=Filter.StringFilter(value="first_visit"),
+                )
+            ),
+        )
+
+
+        response = client.run_report(request)
+        rows = []
+        for row in response.rows:
+            rows.append([x.value for x in row.dimension_values]+[x.value for x in row.metric_values])
 
 
 
@@ -130,9 +159,7 @@ if show_trends:
 
 @st.cache_data
 def visitors(dates):
-    password_B = get_credentials(host+user+password)
-    client = BetaAnalyticsDataClient().from_service_account_info(json.loads(password_B))
-
+    
     date_ranges = []
     for date in dates:
         date_ranges.append(DateRange(start_date=date[0], end_date=date[1]))
@@ -1140,10 +1167,16 @@ funnel_expander.plotly_chart(fig, use_container_width=True)
 
 
 
-st.divider()
+# st.divider()
+
+
+
+
+
+
 
 curr_expander = st.expander("CURR")
-curr_expander.write("Current user retention rate")
+curr_expander.write("Current user (excluding new users) retention rate")
 curr_col1, curr_col2, curr_col3 = curr_expander.columns(3)
 curr_freq = curr_col3.selectbox('Time frame',('Daily','Weekly', 'Bi-weekly', 'Monthly'), index=1, key='curr_freq')
 curr_from = curr_col1.date_input(label="From",value=default_from,key='curr_from')
@@ -1154,7 +1187,9 @@ data = []
 raw_numbers = []
 for i in range(len(date_range_str)):
     date = pd.to_datetime(np.array(date_range_str[i]))
-    current_user_ids = set(df2[(df2['username_persistent']!='Anonymous')&(df2['requested_at'].dt.normalize()>=date[0])&(df2['requested_at'].dt.normalize()<=date[1])]['user_id'])
+    active_user_ids = active_users([date_range_str[i]])[1][0]
+    new_user_ids = new_users([date_range_str[i]])[1][0]
+    current_user_ids = active_user_ids - new_user_ids
     raw_numbers.append(len(current_user_ids))
     l = np.array(active_users(date_range_str[i:],[current_user_ids]*len(date_range_str))[0])
     l = list(np.round(l/len(current_user_ids),4)*100)
@@ -1237,6 +1272,56 @@ for i in range(len(date_range_str)):
 fig.update_layout(annotations=annotations)
 
 nurr_expander.plotly_chart(fig, use_container_width=True)
+
+
+
+aurr_expander = st.expander("RR")
+aurr_expander.write("(Active user) Retention rate")
+aurr_col1, aurr_col2, aurr_col3 = aurr_expander.columns(3)
+aurr_freq = aurr_col3.selectbox('Time frame',('Daily','Weekly', 'Bi-weekly', 'Monthly'), index=1, key='aurr_freq')
+aurr_from = aurr_col1.date_input(label="From",value=default_from,key='aurr_from')
+aurr_to = aurr_col2.date_input(label="To",value=default_to,key='aurr_to')
+date_range_start, date_range_end, date_range_str = get_dates(aurr_from,aurr_to,aurr_freq)
+
+data = []
+raw_numbers = []
+for i in range(len(date_range_str)):
+    date = pd.to_datetime(np.array(date_range_str[i]))
+    current_user_ids = set(df2[(df2['username_persistent']!='Anonymous')&(df2['requested_at'].dt.normalize()>=date[0])&(df2['requested_at'].dt.normalize()<=date[1])]['user_id'])
+    raw_numbers.append(len(current_user_ids))
+    l = np.array(active_users(date_range_str[i:],[current_user_ids]*len(date_range_str))[0])
+    l = list(np.round(l/len(current_user_ids),4)*100)
+    data.append(l+[np.nan]*(len(date_range_str)-len(l)))
+#data.append([1]+[np.nan]*(len(date_range_str)-1))
+data = np.array(data)
+
+if aurr_freq=='Daily':
+    y = [x.strftime('%b-%d %a') + f'        {raw_numbers[i]}'  for i,x in enumerate(date_range_end)]
+elif aurr_freq=='Weekly' or aurr_freq=='Bi-weekly':
+    y = [x[0].strftime('%b %d')+"-"+x[1].strftime('%b %d') + f'        {raw_numbers[i]}'  for i,x in enumerate(zip(date_range_start,date_range_end))]
+else:
+    y = [x.strftime('%Y %b') + f'        {raw_numbers[i]}'  for i,x in enumerate(date_range_end)]
+fig = px.imshow(data,
+                labels=dict(x="Period", y="Date", color="Retention Rate (%)"),
+                y=y,
+                color_continuous_scale='rdylgn'
+               )
+fig.update_xaxes(side="top")
+
+annotations = []
+for i in range(len(date_range_str)):
+    for j in range(len(date_range_str)):
+        if not np.isnan(data[i, j]):
+            if 70>data[i, j]>30:
+                annotations.append(dict(x=j, y=i, text=f"{data[i, j]:.1f}%", showarrow=False, font=dict(color="black")))
+            else:
+                annotations.append(dict(x=j, y=i, text=f"{data[i, j]:.1f}%", showarrow=False, font=dict(color="white")))
+
+fig.update_layout(annotations=annotations)
+
+aurr_expander.plotly_chart(fig, use_container_width=True)
+
+
 
 
 
