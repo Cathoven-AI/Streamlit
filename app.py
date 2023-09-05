@@ -1248,7 +1248,7 @@ funnel_expander.plotly_chart(fig, use_container_width=True)
 
 
 
-source_expander = st.expander("Funnel")
+source_expander = st.expander("User Source")
 source_col1, source_col2 = source_expander.columns(2)
 source_from = source_col1.date_input(label="From",value=default_from,key='source_from')
 source_to = source_col2.date_input(label="To",value=default_to,key='source_to')
