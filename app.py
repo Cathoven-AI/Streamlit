@@ -360,6 +360,33 @@ def intent_users(date):
 
 
 @st.cache_data
+def user_source(date):
+    request = RunReportRequest(
+        property=f"properties/294609234",
+        dimensions=[Dimension(name="fullPageUrl")],
+        metrics=[Metric(name="totalUsers"),Metric(name="eventCount")],
+        date_ranges=[DateRange(start_date=date[0], end_date=date[1])],
+        dimension_filter=FilterExpression(
+            and_group=FilterExpressionList(
+                expressions=[
+                    FilterExpression(
+                        filter=Filter(
+                            field_name="eventName",
+                            string_filter=Filter.StringFilter(value="first_visit"),
+                        )
+                    ),
+                ]
+            )
+        ),
+    )
+    response = client.run_report(request)
+    rows = []
+    for row in response.rows:
+        rows.append([x.value for x in row.dimension_values]+[x.value for x in row.metric_values])
+    return pd.DataFrame(rows,columns=['first_visit_url','total_users','event_count']).set_index('first_visit_url')
+
+
+@st.cache_data
 def rurr(dates):
     df2_temp = df2[df2['username_persistent']!='Anonymous'].copy()
     df2_temp['requested_at'] = df2_temp['requested_at'].dt.normalize()
@@ -1208,16 +1235,24 @@ if 'New Subscription Users' in options:
 if funnal_percentage=='Initial step':
     fig = go.Figure(go.Funnel(
         y = [z for z in options],
-        x = [x[i] for i,z in enumerate(options)],
+        x = [x[i] for i in range(len(options))],
         textinfo = "value+percent initial",hoverinfo="x+y+percent initial+percent previous"))
 else:
     fig = go.Figure(go.Funnel(
         y = [z for z in options],
-        x = [x[i] for i,z in enumerate(options)],
+        x = [x[i] for i in range(len(options))],
         textinfo = "value+percent previous",hoverinfo="x+y+percent initial+percent previous"))
 funnel_expander.plotly_chart(fig, use_container_width=True)
 
 
+
+
+
+source_expander = st.expander("Funnel")
+source_col1, source_col2 = source_expander.columns(2)
+source_from = source_col1.date_input(label="From",value=default_from,key='source_from')
+source_to = source_col2.date_input(label="To",value=default_to,key='source_to')
+source_expander.dataframe(user_source([source_from.strftime('%Y-%m-%d'),source_to.strftime('%Y-%m-%d')]), use_container_width=True)
 
 
 
