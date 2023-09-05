@@ -360,11 +360,11 @@ def intent_users(date):
 
 
 @st.cache_data
-def user_source(date):
+def first_visit_url(date):
     request = RunReportRequest(
         property=f"properties/294609234",
         dimensions=[Dimension(name="fullPageUrl")],
-        metrics=[Metric(name="totalUsers"),Metric(name="eventCount")],
+        metrics=[Metric(name="totalUsers"),Metric(name="sessions")],
         date_ranges=[DateRange(start_date=date[0], end_date=date[1])],
         dimension_filter=FilterExpression(
             and_group=FilterExpressionList(
@@ -383,7 +383,22 @@ def user_source(date):
     rows = []
     for row in response.rows:
         rows.append([x.value for x in row.dimension_values]+[x.value for x in row.metric_values])
-    return pd.DataFrame(rows,columns=['first_visit_url','total_users','event_count']).set_index('first_visit_url')
+    return pd.DataFrame(rows,columns=['first_visit_url','total_users','sessions']).set_index('first_visit_url')
+
+
+@st.cache_data
+def user_source(date):
+    request = RunReportRequest(
+        property=f"properties/294609234",
+        dimensions=[Dimension(name="firstUserSourceMedium")],
+        metrics=[Metric(name="totalUsers"),Metric(name="sessions")],
+        date_ranges=[DateRange(start_date=date[0], end_date=date[1])],
+    )
+    response = client.run_report(request)
+    rows = []
+    for row in response.rows:
+        rows.append([x.value for x in row.dimension_values]+[x.value for x in row.metric_values])
+    return pd.DataFrame(rows,columns=['source / medium','total_users','sessions']).set_index('source / medium')
 
 
 @st.cache_data
@@ -1253,6 +1268,7 @@ source_col1, source_col2 = source_expander.columns(2)
 source_from = source_col1.date_input(label="From",value=default_from,key='source_from')
 source_to = source_col2.date_input(label="To",value=default_to,key='source_to')
 source_expander.dataframe(user_source([source_from.strftime('%Y-%m-%d'),source_to.strftime('%Y-%m-%d')]), use_container_width=True)
+source_expander.dataframe(first_visit_url([source_from.strftime('%Y-%m-%d'),source_to.strftime('%Y-%m-%d')]), use_container_width=True)
 
 
 
