@@ -14,6 +14,7 @@ from google.analytics.data_v1beta.types import (
     FilterExpression,
     Metric,
     RunReportRequest,
+    FilterExpressionList,
 )
 
 @st.cache_data
@@ -95,7 +96,7 @@ else:
 
 
 @st.cache_data
-def queryAnalytics(dates,dimentions,metrics,and_filters=None):
+def query_analytics(dates,dimentions,metrics,and_filters=None):
    
     date_ranges = []
     for date in dates:
@@ -108,9 +109,15 @@ def queryAnalytics(dates,dimentions,metrics,and_filters=None):
             metrics=[Metric(name=x) for x in metrics],
             date_ranges=date_ranges,
             dimension_filter=FilterExpression(
-                filter=Filter(
-                    field_name="eventName",
-                    string_filter=Filter.StringFilter(value="first_visit"),
+                and_group=FilterExpressionList(
+                    expressions=[
+                        FilterExpression(
+                            filter=Filter(
+                                field_name=k,
+                                string_filter=Filter.StringFilter(value=v),
+                            )
+                        ) for k,v in and_filters.items()
+                    ]
                 )
             ),
         )
@@ -320,6 +327,37 @@ def churned_users(dates, churning_threshold=30):
         ids.append(churned_user_ids)
         already_churned = already_churned.union(churned_user_ids)
     return np.array(counts), ids
+
+
+@st.cache_data
+def intent_users(date):
+    request = RunReportRequest(
+        property=f"properties/294609234",
+        dimensions=[Dimension(name="customEvent:event_page")],
+        metrics=[Metric(name="totalUsers")],
+        date_ranges=[DateRange(start_date=date[0], end_date=date[1])],
+        dimension_filter=FilterExpression(
+            and_group=FilterExpressionList(
+                expressions=[
+                    FilterExpression(
+                        filter=Filter(
+                            field_name="customEvent:event_page",
+                            string_filter=Filter.StringFilter(value="shop"),
+                        )
+                    ),
+                    FilterExpression(
+                        filter=Filter(
+                            field_name="eventName",
+                            string_filter=Filter.StringFilter(value="change_to_page"),
+                        )
+                    ),
+                ]
+            )
+        ),
+    )
+    response = client.run_report(request)
+    return int(response.rows[0].metric_values[0].value)
+
 
 @st.cache_data
 def rurr(dates):
@@ -1141,15 +1179,29 @@ funnel_to = funnel_col2.date_input(label="To",value=default_to,key='funnel_to')
 funnal_percentage = funnel_col3.selectbox("Show percentage of",('Initial step', 'Previous step'),key='funnel_percentage')
 
 default_options = ["Visitors","Trial Users", "New Users", "New Active Users", "New Subscription Users"]
-options = funnel_expander.multiselect('Steps',options = default_options,default = default_options)
+all_options = ["Visitors","Trial Users", "New Users", "New Active Users", "Intent Users", "New Subscription Users"]
+options = funnel_expander.multiselect('Steps', options=all_options, default=default_options)
 
-visitor_count = visitors([[funnel_from.strftime('%Y-%m-%d'),funnel_to.strftime('%Y-%m-%d')]])
-trial_user_count = trial_users([[funnel_from.strftime('%Y-%m-%d'),funnel_to.strftime('%Y-%m-%d')]])
-new_user_count, new_user_ids = new_users([[funnel_from.strftime('%Y-%m-%d'),funnel_to.strftime('%Y-%m-%d')]])
-new_active_user_count, _ = active_users([[funnel_from.strftime('%Y-%m-%d'),funnel_to.strftime('%Y-%m-%d')]],new_user_ids)
-subscription_user_count, _ = new_subscription_users([[funnel_from.strftime('%Y-%m-%d'),funnel_to.strftime('%Y-%m-%d')]])
+x = []
+if 'Visitors' in options:
+    visitor_count = visitors([[funnel_from.strftime('%Y-%m-%d'),funnel_to.strftime('%Y-%m-%d')]])
+    x.append(visitor_count[0])
+if 'Trial Users' in options:
+    trial_user_count = trial_users([[funnel_from.strftime('%Y-%m-%d'),funnel_to.strftime('%Y-%m-%d')]])
+    x.append(trial_user_count[0])
+if 'New Users' in options:
+    new_user_count, new_user_ids = new_users([[funnel_from.strftime('%Y-%m-%d'),funnel_to.strftime('%Y-%m-%d')]])
+    x.append(new_user_count[0])
+if 'New Active Users' in options:
+    new_active_user_count, _ = active_users([[funnel_from.strftime('%Y-%m-%d'),funnel_to.strftime('%Y-%m-%d')]],new_user_ids)
+    x.append(new_active_user_count[0])
+if 'Intent Users' in options:
+    intent_user_count = intent_users([funnel_from.strftime('%Y-%m-%d'),funnel_to.strftime('%Y-%m-%d')])
+    x.append(intent_user_count)
+if 'New Subscription Users' in options:
+    subscription_user_count, _ = new_subscription_users([[funnel_from.strftime('%Y-%m-%d'),funnel_to.strftime('%Y-%m-%d')]])
+    x.append(subscription_user_count[0])
 
-x = [visitor_count[0],trial_user_count[0], new_user_count[0], new_active_user_count[0], subscription_user_count[0]]
 if funnal_percentage=='Initial step':
     fig = go.Figure(go.Funnel(
         y = [z for z in default_options if z in options],
