@@ -1181,6 +1181,7 @@ funnal_percentage = funnel_col3.selectbox("Show percentage of",('Initial step', 
 default_options = ["Visitors","Trial Users", "New Users", "New Active Users", "New Subscription Users"]
 all_options = ["Visitors","Trial Users", "New Users", "New Active Users", "Intent Users", "New Subscription Users"]
 options = funnel_expander.multiselect('Steps', options=all_options, default=default_options)
+options = [x for x in all_options if x in options]
 
 x = []
 if 'Visitors' in options:
