@@ -1177,8 +1177,10 @@ funnel_col1, funnel_col2, funnel_col3 = funnel_expander.columns(3)
 funnel_from = funnel_col1.date_input(label="From",value=default_from,key='funnel_from')
 funnel_to = funnel_col2.date_input(label="To",value=default_to,key='funnel_to')
 funnal_percentage = funnel_col3.selectbox("Show percentage of",('Initial step', 'Previous step'),key='funnel_percentage')
-
-default_options = ["Visitors","Trial Users", "New Users", "New Active Users", "New Subscription Users"]
+if funnel_from>=pd.to_datetime('2023-08-15'):
+    default_options = ["Visitors","Trial Users", "New Users", "New Active Users", "Intent Users", "New Subscription Users"]
+else:
+    default_options = ["Visitors","Trial Users", "New Users", "New Active Users", "New Subscription Users"]
 all_options = ["Visitors","Trial Users", "New Users", "New Active Users", "Intent Users", "New Subscription Users"]
 options = funnel_expander.multiselect('Steps', options=all_options, default=default_options)
 options = [x for x in all_options if x in options]
