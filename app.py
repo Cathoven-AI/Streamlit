@@ -1204,13 +1204,13 @@ if 'New Subscription Users' in options:
 
 if funnal_percentage=='Initial step':
     fig = go.Figure(go.Funnel(
-        y = [z for z in default_options if z in options],
-        x = [x[i] for i,z in enumerate(default_options) if z in options],
+        y = [z for z in options],
+        x = [x[i] for i,z in enumerate(options)],
         textinfo = "value+percent initial",hoverinfo="x+y+percent initial+percent previous"))
 else:
     fig = go.Figure(go.Funnel(
-        y = [z for z in default_options if z in options],
-        x = [x[i] for i,z in enumerate(default_options) if z in options],
+        y = [z for z in options],
+        x = [x[i] for i,z in enumerate(options)],
         textinfo = "value+percent previous",hoverinfo="x+y+percent initial+percent previous"))
 funnel_expander.plotly_chart(fig, use_container_width=True)
 
