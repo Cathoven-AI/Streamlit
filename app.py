@@ -478,6 +478,32 @@ def activation_rate(dates):
     new_user_counts, new_user_ids = new_users(dates)
     return active_users(dates, new_user_ids)[0]/new_user_counts
 
+
+@st.cache_data
+def second_use_interval(date):
+    date = pd.to_datetime(np.array(date))
+    ip2id = df2.drop_duplicates(['remote_addr','user_id']).set_index('remote_addr')['user_id'].dropna().to_dict()
+    df_temp = df2.copy()
+    df_temp['user_id'] = df_temp['user_id'].replace(ip2id)
+    df_temp = df_temp.sort_values(['user_id','requested_at']).drop_duplicates('user_id')
+    df_temp['requested_at2'] = df_temp['requested_at'].dt.normalize()
+    user_ids = set(df_temp[(df_temp['requested_at2']>=date[0])&(df_temp['requested_at2']<=date[1])]['user_id'].values)
+    intervals = []
+    for _,g in df2[df2['user_id'].apply(lambda x: x in user_ids)].groupby('user_id'):
+        interval = 0
+        g = g.sort_values('requested_at')
+        g['interval'] = (g['requested_at']-g.iloc[0]['requested_at']).apply(lambda x: x.days)
+        g = g.drop_duplicates('interval')
+        if len(g)>1:
+            interval = g.iloc[1]['interval']
+            intervals.append(interval)
+    return intervals
+
+
+
+
+
+
 @st.cache_data
 def moving_average(arr, window_size=0):
     if window_size<=1:
@@ -511,6 +537,12 @@ def get_dates(start,end,freq):
 
 default_to = pd.to_datetime((pd.Timestamp.today()-pd.Timedelta(days=2)).date())
 default_from = default_to-pd.Timedelta(days=63)
+
+
+
+
+
+
 
 
 au_expander = st.expander("Active Users")
@@ -1100,7 +1132,7 @@ er_expander.plotly_chart(fig, use_container_width=True)
 
 
 rgr_expander = st.expander("Registration Rate")
-rgr_expander.write("Trial Users / New users")
+rgr_expander.write("New users / Trial Users")
 rgr_col1, rgr_col2, rgr_col3 = rgr_expander.columns(3)
 rgr_from = rgr_col1.date_input(label="From",value=default_from,key='rgr_from')
 rgr_to = rgr_col2.date_input(label="To",value=default_to,key='rgr_to')
@@ -1271,6 +1303,21 @@ source_expander.dataframe(user_source([source_from.strftime('%Y-%m-%d'),source_t
 source_expander.dataframe(first_visit_url([source_from.strftime('%Y-%m-%d'),source_to.strftime('%Y-%m-%d')]), use_container_width=True)
 
 
+
+
+
+
+
+interval_expander = st.expander("Second Use Day")
+interval_col1, interval_col2 = interval_expander.columns(2)
+interval_from = interval_col1.date_input(label="From",value=default_from,key='interval_from')
+interval_to = interval_col2.date_input(label="To",value=default_to,key='interval_to')
+intervals = second_use_interval([interval_from,interval_to])
+y, x = np.histogram(intervals,bins=range(min(intervals)+1,max(intervals)+1))
+fig = go.Figure(data=go.Bar(x=list(range(int(min(x)-1),int(max(x)-1))), y=y/sum(y)*100))
+
+fig.update_layout(xaxis_title='Day',yaxis_title='Percentage (%)')
+interval_expander.plotly_chart(fig, use_container_width=True)
 
 
 st.divider()
