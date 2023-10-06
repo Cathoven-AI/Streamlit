@@ -1317,7 +1317,7 @@ intervals = second_use_interval([interval_from,interval_to])
 y, x = np.histogram(intervals,bins=range(min(intervals)+1,max(intervals)+1))
 fig = go.Figure(data=go.Bar(x=list(range(int(min(x)-1),int(max(x)-1))), y=y/sum(y)*100))
 
-fig.update_layout(xaxis_title='Day',yaxis_title='Percentage of users (%)')
+fig.update_layout(xaxis_title='Day',yaxis_title='Percentage of selected users (%)')
 interval_expander.plotly_chart(fig, use_container_width=True)
 
 
