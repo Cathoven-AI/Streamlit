@@ -492,7 +492,7 @@ def second_use_interval(date):
     for _,g in df2[df2['user_id'].apply(lambda x: x in user_ids)].groupby('user_id'):
         interval = 0
         g = g.sort_values('requested_at')
-        g['interval'] = (g['requested_at']-g.iloc[0]['requested_at']).apply(lambda x: x.days)
+        g['interval'] = (g['requested_at']-g.iloc[0]['requested_at']).apply(lambda x: 1 if 12<=x.seconds/3600<1 else x.days)
         g = g.drop_duplicates('interval')
         if len(g)>1:
             interval = g.iloc[1]['interval']
@@ -1309,6 +1309,7 @@ source_expander.dataframe(first_visit_url([source_from.strftime('%Y-%m-%d'),sour
 
 
 interval_expander = st.expander("Second Use Day")
+interval_expander.write("Includes only the users whose first use was in the selected time frame")
 interval_col1, interval_col2 = interval_expander.columns(2)
 interval_from = interval_col1.date_input(label="From",value=default_from,key='interval_from')
 interval_to = interval_col2.date_input(label="To",value=default_to,key='interval_to')
@@ -1316,7 +1317,7 @@ intervals = second_use_interval([interval_from,interval_to])
 y, x = np.histogram(intervals,bins=range(min(intervals)+1,max(intervals)+1))
 fig = go.Figure(data=go.Bar(x=list(range(int(min(x)-1),int(max(x)-1))), y=y/sum(y)*100))
 
-fig.update_layout(xaxis_title='Day',yaxis_title='Percentage (%)')
+fig.update_layout(xaxis_title='Day',yaxis_title='Percentage of users (%)')
 interval_expander.plotly_chart(fig, use_container_width=True)
 
 
