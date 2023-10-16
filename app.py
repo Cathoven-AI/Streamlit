@@ -187,11 +187,9 @@ def visitors(dates):
             ),
         )
         response = client.run_report(request)
-        for row in response.rows:
-            st.write(row)
-        values += [row.metric_values[-1].value for row in response.rows]
+        values += list(reversed([row.metric_values[-1].value for row in response.rows]))
 
-    return np.array(list(reversed(values)))
+    return np.array(values)
 
 
 @st.cache_data
