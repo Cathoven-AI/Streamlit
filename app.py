@@ -170,6 +170,7 @@ def visitors(dates):
     date_ranges = []
     for date in dates:
         date_ranges.append(DateRange(start_date=date[0], end_date=date[1]))
+    print(date_ranges)
 
     values = []
 
