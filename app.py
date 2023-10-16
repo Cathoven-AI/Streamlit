@@ -174,7 +174,6 @@ def visitors(dates):
     values = []
 
     for i in range(int((len(date_ranges)-1)//4+1)):
-        st.write(date_ranges[i*4:(i+1)*4])
         request = RunReportRequest(
             property=f"properties/294609234",
             dimensions=[Dimension(name="eventName")],
@@ -188,7 +187,8 @@ def visitors(dates):
             ),
         )
         response = client.run_report(request)
-
+        for row in response.rows:
+            st.write(row)
         values += [row.metric_values[-1].value for row in response.rows]
 
     return np.array(list(reversed(values)))
