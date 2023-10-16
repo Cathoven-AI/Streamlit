@@ -170,11 +170,11 @@ def visitors(dates):
     date_ranges = []
     for date in dates:
         date_ranges.append(DateRange(start_date=date[0], end_date=date[1]))
-    st.write(date_ranges)
+    
     values = []
 
     for i in range(int((len(date_ranges)-1)//4+1)):
-        
+        st.write(date_ranges[i*4:(i+1)*4])
         request = RunReportRequest(
             property=f"properties/294609234",
             dimensions=[Dimension(name="eventName")],
