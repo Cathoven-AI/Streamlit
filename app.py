@@ -1295,7 +1295,7 @@ kf_col1, kf_col2, kf_col3 = kf_expander.columns(3)
 kf_from = kf_col1.date_input(label="From",value=default_from,key='kf_from')
 kf_to = kf_col2.date_input(label="To",value=default_to,key='kf_to')
 kf_freq = kf_col3.selectbox('Time frame',('Daily', 'Weekly', 'Bi-weekly', 'Monthly'),index=1,key='kf_freq')
-kf_yrange = kf_expander.slider("Y-axis range", value=(0, 0.5), min_value=0, max_value=1, step=0.1, key='kf_yrange')
+kf_yrange = kf_expander.slider("Y-axis range", value=(0., 0.5), min_value=0., max_value=1., step=0.1, key='kf_yrange')
 
 date_range_start, date_range_end, date_range_str = get_dates(kf_from,kf_to,kf_freq)
 kf = np.round(referred_users(date_range_str)[0]/referring_users(date_range_str),2)
