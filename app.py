@@ -434,6 +434,7 @@ def referring_users(dates):
                 row[1] = int(row[1].split('_')[-1])+i*4
                 rows.append(row)
     data = pd.DataFrame(rows,columns=['button','date_range','value'])
+    st.write(data)
     values = list(data.groupby('date_range').agg(sum)['value'].sort_index().values)
     values = [0]*(len(dates)-len(values))+values
     return np.array(values)
@@ -1303,20 +1304,20 @@ kf = np.round(referred_users(date_range_str)[0]/referring_users(date_range_str),
 fig = go.Figure()
 if kf_freq=='Daily':
     x = [x.strftime('%b-%d %a') for x in date_range_end]
-    fig.add_trace(go.Scatter(x=x, y=kf, name='Daily Recommendation Rate (‰)'))
-    fig.update_layout(xaxis_title='Day',yaxis_title='Recommendation Rate (‰)')
+    fig.add_trace(go.Scatter(x=x, y=kf, name='Daily K Factor'))
+    fig.update_layout(xaxis_title='Day',yaxis_title='K Factor')
 elif kf_freq=='Weekly':
     x = [x[0].strftime('%b %d')+"-"+x[1].strftime('%b %d') for x in zip(date_range_start,date_range_end)]
-    fig.add_trace(go.Scatter(x=x, y=kf, name='Weekly Recommendation Rate (‰)'))
-    fig.update_layout(xaxis_title='Week',yaxis_title='Recommendation Rate (‰)')
+    fig.add_trace(go.Scatter(x=x, y=kf, name='Weekly K Factor'))
+    fig.update_layout(xaxis_title='Week',yaxis_title='K Factor')
 elif kf_freq=='Bi-weekly':
     x = [x[0].strftime('%b %d')+"-"+x[1].strftime('%b %d') for x in zip(date_range_start,date_range_end)]
-    fig.add_trace(go.Scatter(x=x, y=kf, name='Bi-weekly Recommendation Rate (‰)'))
-    fig.update_layout(xaxis_title='Bi-week',yaxis_title='Recommendation Rate (‰)')
+    fig.add_trace(go.Scatter(x=x, y=kf, name='Bi-weekly K Factor'))
+    fig.update_layout(xaxis_title='Bi-week',yaxis_title='K Factor')
 else:
     x = [x.strftime('%Y %b') for x in date_range_end]
-    fig.add_trace(go.Scatter(x=x, y=kf, name='Monthly Recommendation Rate (‰)'))
-    fig.update_layout(xaxis_title='Month',yaxis_title='Recommendation Rate (‰)')
+    fig.add_trace(go.Scatter(x=x, y=kf, name='Monthly K Factor'))
+    fig.update_layout(xaxis_title='Month',yaxis_title='K Factor')
 
 if show_trends:
     if kf_freq=='Daily':
