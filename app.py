@@ -1317,12 +1317,13 @@ interval_to = interval_col2.date_input(label="To",value=default_to,key='interval
 intervals = second_use_interval([interval_from,interval_to])
 cumulative = interval_expander.toggle('Cumulative',key='interval_cumulative',value=True)
 y, x = np.histogram(intervals,bins=range(min(intervals)+1,max(intervals)+1))
+total = sum(y)
 
 if cumulative:
     y = np.cumsum(y)
-    fig = go.Figure(data=go.Scatter(x=list(range(int(min(x)-1),int(max(x)-1))), y=y/sum(y)*100))
+    fig = go.Figure(data=go.Scatter(x=list(range(int(min(x)-1),int(max(x)-1))), y=y/total*100))
 else:
-    fig = go.Figure(data=go.Bar(x=list(range(int(min(x)-1),int(max(x)-1))), y=y/sum(y)*100))
+    fig = go.Figure(data=go.Bar(x=list(range(int(min(x)-1),int(max(x)-1))), y=y/total*100))
 
 fig.update_layout(xaxis_title='Day',yaxis_title='Percentage of selected users (%)')
 interval_expander.plotly_chart(fig, use_container_width=True)
