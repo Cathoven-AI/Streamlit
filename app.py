@@ -447,6 +447,8 @@ def get_referral_data(dates):
             if row[1]!='RESERVED_TOTAL':
                 row[0] = int(row[0].split('.')[0])-1
                 row[1] = int(row[1].split('_')[-1])+i*4
+                st.write(i)
+                st.write(row)
                 rows.append(row)
     data = pd.DataFrame(rows,columns=['step','date_range','value'])
     return data
@@ -455,7 +457,6 @@ def get_referral_data(dates):
 @st.cache_data
 def recommendation_rate(dates):
     data = get_referral_data(dates)
-    st.write(data)
     values = []
     for i in range(len(dates)):
         x = data[data['date_range']==i].sort_values('step').values
