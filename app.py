@@ -177,7 +177,7 @@ def visitors(dates):
         request = RunReportRequest(
             property=f"properties/294609234",
             dimensions=[Dimension(name="eventName")],
-            metrics=[Metric(name="totalUsers")],
+            metrics=[Metric(name="activeUsers")],
             date_ranges=date_ranges[i*4:(i+1)*4],
             dimension_filter=FilterExpression(
                 filter=Filter(
@@ -335,7 +335,7 @@ def intent_users(date):
     request = RunReportRequest(
         property=f"properties/294609234",
         dimensions=[Dimension(name="customEvent:event_page")],
-        metrics=[Metric(name="totalUsers")],
+        metrics=[Metric(name="activeUsers")],
         date_ranges=[DateRange(start_date=date[0], end_date=date[1])],
         dimension_filter=FilterExpression(
             and_group=FilterExpressionList(
@@ -365,7 +365,7 @@ def first_visit_url(date):
     request = RunReportRequest(
         property=f"properties/294609234",
         dimensions=[Dimension(name="fullPageUrl")],
-        metrics=[Metric(name="totalUsers"),Metric(name="sessions")],
+        metrics=[Metric(name="activeUsers"),Metric(name="sessions")],
         date_ranges=[DateRange(start_date=date[0], end_date=date[1])],
         dimension_filter=FilterExpression(
             and_group=FilterExpressionList(
