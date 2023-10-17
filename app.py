@@ -1274,8 +1274,8 @@ if 'Intent Users' in options:
     intent_user_count = intent_users([funnel_from.strftime('%Y-%m-%d'),funnel_to.strftime('%Y-%m-%d')])
     x.append(intent_user_count)
 if 'New Subscription Users' in options:
-    subscription_user_count, _ = new_subscription_users([[funnel_from.strftime('%Y-%m-%d'),funnel_to.strftime('%Y-%m-%d')]])
-    x.append(subscription_user_count[0])
+    subscription_user_count, subscription_user_ids = new_subscription_users([[funnel_from.strftime('%Y-%m-%d'),funnel_to.strftime('%Y-%m-%d')]])
+    x.append(len(subscription_user_ids[0].intersection(new_user_ids[0])))
 
 if funnal_percentage=='Initial step':
     fig = go.Figure(go.Funnel(
