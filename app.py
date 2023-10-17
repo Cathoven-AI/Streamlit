@@ -381,68 +381,73 @@ def get_referral_data(dates):
     for date in dates:
         date_ranges.append(DateRange(start_date=date[0], end_date=date[1]))
     
-    request = RunFunnelReportRequest(
-        property=f"properties/294609234",
-        date_ranges=date_ranges,
-        funnel=Funnel(
-            steps=[
-                FunnelStep(
-                    name="Referral",
-                    filter_expression=FunnelFilterExpression(
-                        and_group=FunnelFilterExpressionList(
-                            expressions=[
-                                FunnelFilterExpression(
-                                    funnel_field_filter=FunnelFieldFilter(
-                                        field_name="firstUserSourceMedium",
-                                        string_filter=StringFilter(
-                                            match_type=StringFilter.MatchType.CONTAINS,
-                                            case_sensitive=False,
-                                            value="referral",
-                                        ),
-                                    ),
-                                ),
-                                FunnelFilterExpression(
-                                    funnel_field_filter=FunnelFieldFilter(
-                                        field_name="newVsReturning",
-                                        string_filter=StringFilter(
-                                            match_type=StringFilter.MatchType.CONTAINS,
-                                            case_sensitive=False,
-                                            value="new",
-                                        ),
-                                    ),
-                                ),
-                            ]
-                        ),
-                        not_expression=FunnelFilterExpression(
-                                    funnel_field_filter=FunnelFieldFilter(
-                                        field_name="firstUserSourceMedium",
-                                        string_filter=StringFilter(
-                                            match_type=StringFilter.MatchType.CONTAINS,
-                                            case_sensitive=False,
-                                            value="bing.",
-                                        ),
-                                    )
-                        ),
-                    ),
-                ),
-                FunnelStep(
-                    name="Logged in",
-                    filter_expression=FunnelFilterExpression(
-                        funnel_event_filter=FunnelEventFilter(
-                            event_name="logged_in"
-                        )
-                    ),
-                ),
-            ]
-        ),
-    )
-    response = client_alpha.run_funnel_report(request)
+    for i in range(int((len(date_ranges)-1)//4+1)):
 
-    rows = []
-    for row in response.funnel_visualization.rows:
-        rows.append([x.value for x in row.dimension_values]+[x.value for x in row.metric_values])
+        request = RunFunnelReportRequest(
+            property=f"properties/294609234",
+            date_ranges=date_ranges[i*4:(i+1)*4],
+            funnel=Funnel(
+                steps=[
+                    FunnelStep(
+                        name="Referral",
+                        filter_expression=FunnelFilterExpression(
+                            and_group=FunnelFilterExpressionList(
+                                expressions=[
+                                    FunnelFilterExpression(
+                                        funnel_field_filter=FunnelFieldFilter(
+                                            field_name="firstUserSourceMedium",
+                                            string_filter=StringFilter(
+                                                match_type=StringFilter.MatchType.CONTAINS,
+                                                case_sensitive=False,
+                                                value="referral",
+                                            ),
+                                        ),
+                                    ),
+                                    FunnelFilterExpression(
+                                        funnel_field_filter=FunnelFieldFilter(
+                                            field_name="newVsReturning",
+                                            string_filter=StringFilter(
+                                                match_type=StringFilter.MatchType.CONTAINS,
+                                                case_sensitive=False,
+                                                value="new",
+                                            ),
+                                        ),
+                                    ),
+                                ]
+                            ),
+                            not_expression=FunnelFilterExpression(
+                                        funnel_field_filter=FunnelFieldFilter(
+                                            field_name="firstUserSourceMedium",
+                                            string_filter=StringFilter(
+                                                match_type=StringFilter.MatchType.CONTAINS,
+                                                case_sensitive=False,
+                                                value="bing.",
+                                            ),
+                                        )
+                            ),
+                        ),
+                    ),
+                    FunnelStep(
+                        name="Logged in",
+                        filter_expression=FunnelFilterExpression(
+                            funnel_event_filter=FunnelEventFilter(
+                                event_name="logged_in"
+                            )
+                        ),
+                    ),
+                ]
+            ),
+        )
+        response = client_alpha.run_funnel_report(request)
+
+        rows = []
+        for row in response.funnel_visualization.rows:
+            row = [x.value for x in row.dimension_values]+[x.value for x in row.metric_values]
+            if row[1]!='RESERVED_TOTAL':
+                row[0] = int(row[0].split('.')[0])-1
+                row[1] = int(row[1].split('_')[-1])+i*4
+                rows.append(row)
     data = pd.DataFrame(rows,columns=['step','date_range','value'])
-    data['step'] = data['step'].apply(lambda x: int(x.split('.')[0])-1)
     return data
 
 
@@ -451,7 +456,7 @@ def recommendation_rate(dates):
     data = get_referral_data(dates)
     values = []
     for i in range(len(dates)):
-        x = data[data['date_range']==f'date_range_{i}'].sort_values('step').values
+        x = data[data['date_range']==i].sort_values('step').values
         values.append(x[-1]/x[0])
     return np.array(values)
 
