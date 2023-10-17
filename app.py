@@ -381,6 +381,7 @@ def get_referral_data(dates):
     for date in dates:
         date_ranges.append(DateRange(start_date=date[0], end_date=date[1]))
     
+    rows = []
     for i in range(int((len(date_ranges)-1)//4+1)):
 
         request = RunFunnelReportRequest(
@@ -440,7 +441,7 @@ def get_referral_data(dates):
         )
         response = client_alpha.run_funnel_report(request)
 
-        rows = []
+        
         for row in response.funnel_visualization.rows:
             row = [x.value for x in row.dimension_values]+[x.value for x in row.metric_values]
             if row[1]!='RESERVED_TOTAL':
