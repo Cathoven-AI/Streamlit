@@ -446,7 +446,7 @@ def get_referral_data(dates):
             row = [x.value for x in row.dimension_values]+[x.value for x in row.metric_values]
             if row[1]!='RESERVED_TOTAL':
                 row[0] = int(row[0].split('.')[0])-1
-                row[1] = int(row[1].split('_')[-1])#+i*4
+                row[1] = int(row[1].split('_')[-1])+i*4
                 rows.append(row)
     data = pd.DataFrame(rows,columns=['step','date_range','value'])
     return data
