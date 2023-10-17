@@ -434,7 +434,7 @@ def referring_users(dates):
             rows.append(row)
     data = pd.DataFrame(rows,columns=['button','date_range','value'])
     values = list(data.groupby('date_range').agg(sum)['value'].sort_index().values)
-    values = [0]*(len(dates)-len(values))+values
+    values = [np.nan]*(len(dates)-len(values))+values
     return np.array(values)
 
 
