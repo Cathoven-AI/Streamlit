@@ -445,7 +445,7 @@ def get_referral_data(dates):
         for row in response.funnel_visualization.rows:
             row = [x.value for x in row.dimension_values]+[x.value for x in row.metric_values]
             if len(row)==2:
-                row = row[0]+["0"]+row[1:]
+                row = row[:1]+["0"]+row[-1:]
             if row[1]!='RESERVED_TOTAL':
                 row[0] = int(row[0].split('.')[0])-1
                 row[1] = int(row[1].split('_')[-1])+i*4
