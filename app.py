@@ -1255,7 +1255,7 @@ tr_freq = tr_col3.selectbox('Time frame',('Daily', 'Weekly', 'Bi-weekly', 'Month
 tr_yrange = tr_expander.slider("Y-axis range", value=(0, 50), min_value=0, max_value=100, step=5, key='tr_yrange')
 
 date_range_start, date_range_end, date_range_str = get_dates(tr_from,tr_to,tr_freq)
-tr = np.round((trial_users(date_range_str)[0]/visitors(date_range_str))*100,2)
+tr = np.round((trial_users(date_range_str)/visitors(date_range_str))*100,2)
 
 fig = go.Figure()
 if tr_freq=='Daily':
