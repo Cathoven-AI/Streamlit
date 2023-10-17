@@ -230,7 +230,7 @@ def new_subscription_users(dates, duration=0, among=None):
     df_temp = df_pro[df_pro['webhook_code']=='BILLING.SUBSCRIPTION.ACTIVATED'].drop_duplicates()
     counts = []
     ids = []
-    for date in dates:
+    for i, date in enumerate(dates):
         date = pd.to_datetime(np.array(date))
         if duration==0:
             temp = df_temp[(df_temp['created'].dt.normalize()>=date[0])&(df_temp['created'].dt.normalize()<=date[1])]
