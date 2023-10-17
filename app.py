@@ -48,7 +48,7 @@ def load_data(host,user,password):
 
     df1 = pd.DataFrame(results, columns = mycursor.column_names)
     df1 = df1[(df1['is_staff']==False)&(df1['is_superuser']==False)]
-    df1 = df1[['id','username','date_joined','pro','last_login','last_interaction']]
+    df1 = df1[['id','username','date_joined','pro','referral','last_login','last_interaction']]
     df1 = df1[(df1['date_joined']<df1['last_login'])&(df1['date_joined']<df1['last_interaction'])]
 
     sql = "SELECT user_id,requested_at,path,remote_addr,host,username_persistent FROM rest_framework_tracking_apirequestlog"
@@ -375,6 +375,17 @@ def intent_users(date):
 
 
 @st.cache_data
+def referred_users(dates):
+    counts = []
+    ids = []
+    for date in dates:
+        date = pd.to_datetime(np.array(date))
+        temp = df1[(df1['date_joined'].dt.normalize()>=date[0])&(df1['date_joined'].dt.normalize()<=date[1])&(df1['referral']==1)]
+        ids.append(set(temp['id'].values))
+        counts.append(len(temp))
+    return np.array(counts), ids
+
+@st.cache_data
 def referring_users(dates):
 
     date_ranges = []
@@ -506,20 +517,6 @@ def get_referral_data(dates):
                 rows.append(row)
     data = pd.DataFrame(rows,columns=['step','date_range','value'])
     return data
-
-
-@st.cache_data
-def recommendation_rate(dates):
-    data = get_referral_data(dates)
-    st.write(data)
-    values = []
-    for i in range(len(dates)):
-        try:
-            x = data[data['date_range']==i].sort_values('step').values
-            values.append(x[-1]/x[0])
-        except:
-            values.append(0)
-    return np.array(values)
 
 
 @st.cache_data
@@ -1292,6 +1289,60 @@ er_expander.plotly_chart(fig, use_container_width=True)
 
 
 
+kf_expander = st.expander("K Factor")
+kf_expander.write("Referral Users / Users who refer")
+kf_col1, kf_col2, kf_col3 = kf_expander.columns(3)
+kf_from = kf_col1.date_input(label="From",value=default_from,key='kf_from')
+kf_to = kf_col2.date_input(label="To",value=default_to,key='kf_to')
+kf_freq = kf_col3.selectbox('Time frame',('Daily', 'Weekly', 'Bi-weekly', 'Monthly'),index=1,key='kf_freq')
+kf_yrange = kf_expander.slider("Y-axis range", value=(0, 5), min_value=0, max_value=20, step=1, key='kf_yrange')
+
+date_range_start, date_range_end, date_range_str = get_dates(kf_from,kf_to,kf_freq)
+kf = np.round(referred_users(date_range_str)[0],referring_users(date_range_str),2)
+
+fig = go.Figure()
+if kf_freq=='Daily':
+    x = [x.strftime('%b-%d %a') for x in date_range_end]
+    fig.add_trace(go.Scatter(x=x, y=kf, name='Daily Recommendation Rate (‰)'))
+    fig.update_layout(xaxis_title='Day',yaxis_title='Recommendation Rate (‰)')
+elif kf_freq=='Weekly':
+    x = [x[0].strftime('%b %d')+"-"+x[1].strftime('%b %d') for x in zip(date_range_start,date_range_end)]
+    fig.add_trace(go.Scatter(x=x, y=kf, name='Weekly Recommendation Rate (‰)'))
+    fig.update_layout(xaxis_title='Week',yaxis_title='Recommendation Rate (‰)')
+elif kf_freq=='Bi-weekly':
+    x = [x[0].strftime('%b %d')+"-"+x[1].strftime('%b %d') for x in zip(date_range_start,date_range_end)]
+    fig.add_trace(go.Scatter(x=x, y=kf, name='Bi-weekly Recommendation Rate (‰)'))
+    fig.update_layout(xaxis_title='Bi-week',yaxis_title='Recommendation Rate (‰)')
+else:
+    x = [x.strftime('%Y %b') for x in date_range_end]
+    fig.add_trace(go.Scatter(x=x, y=kf, name='Monthly Recommendation Rate (‰)'))
+    fig.update_layout(xaxis_title='Month',yaxis_title='Recommendation Rate (‰)')
+
+if show_trends:
+    if kf_freq=='Daily':
+        extra_range_start, extra_range_end, extra_range_str = get_dates(kf_from-pd.Timedelta(days=daily_window_size+1),kf_from,kf_freq)
+        extra_kf = np.round(referred_users(extra_range_str)[0],referring_users(extra_range_str),2)
+        kf_trend = moving_average(list(extra_kf)+list(kf),window_size=daily_window_size)[-len(kf):]
+    elif kf_freq=='Weekly':
+        extra_range_start, extra_range_end, extra_range_str = get_dates(kf_from-pd.Timedelta(days=(weekly_window_size)*8),kf_from,kf_freq)
+        extra_kf = np.round(referred_users(extra_range_str)[0],referring_users(extra_range_str),2)
+        kf_trend = moving_average(list(extra_kf)+list(kf),window_size=weekly_window_size)[-len(kf):]
+    elif kf_freq=='Bi-weekly':
+        extra_range_start, extra_range_end, extra_range_str = get_dates(kf_from-pd.Timedelta(days=(biweekly_window_size)*15),kf_from,kf_freq)
+        extra_kf = np.round(referred_users(extra_range_str)[0],referring_users(extra_range_str),2)
+        kf_trend = moving_average(list(extra_kf)+list(kf),window_size=biweekly_window_size)[-len(kf):]
+    else:
+        extra_range_start, extra_range_end, extra_range_str = get_dates(kf_from-pd.Timedelta(days=(monthly_window_size)*32),kf_from,kf_freq)
+        extra_kf = np.round(referred_users(extra_range_str)[0],referring_users(extra_range_str),2)
+        kf_trend = moving_average(list(extra_kf)+list(kf),window_size=monthly_window_size)[-len(kf):]
+    fig.add_trace(go.Scatter(x=x, y=kf_trend, name='Trend', line=dict(color='firebrick', dash='dash')))
+
+fig.update_layout(legend=dict(yanchor="top",y=1.2,xanchor="left",x=0.01))
+fig.update_yaxes(range=kf_yrange)
+kf_expander.plotly_chart(fig, use_container_width=True)
+
+
+
 sr_expander = st.expander("New Subscription Rate")
 sr_expander.write("New users who subscribe / New users")
 sr_col1, sr_col2, sr_col3 = sr_expander.columns(3)
@@ -1358,7 +1409,7 @@ sr_expander.plotly_chart(fig, use_container_width=True)
 
 
 recr_expander = st.expander("Recommendation Rate")
-recr_expander.write("New users / Trial Users")
+recr_expander.write("Users who refer / Registered Users")
 recr_col1, recr_col2, recr_col3 = recr_expander.columns(3)
 recr_from = recr_col1.date_input(label="From",value=default_from,key='recr_from')
 recr_to = recr_col2.date_input(label="To",value=default_to,key='recr_to')
