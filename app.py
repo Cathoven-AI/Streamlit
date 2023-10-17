@@ -189,7 +189,7 @@ def visitors(dates):
         response = client.run_report(request)
         values += list(reversed([row.metric_values[-1].value for row in response.rows]))
 
-    return np.array(values)
+    return np.array(values,dtype=int)
 
 
 @st.cache_data
@@ -1255,8 +1255,6 @@ tr_freq = tr_col3.selectbox('Time frame',('Daily', 'Weekly', 'Bi-weekly', 'Month
 tr_yrange = tr_expander.slider("Y-axis range", value=(0, 50), min_value=0, max_value=100, step=5, key='tr_yrange')
 
 date_range_start, date_range_end, date_range_str = get_dates(tr_from,tr_to,tr_freq)
-st.write(trial_users(date_range_str))
-st.write(visitors(date_range_str))
 tr = np.round((trial_users(date_range_str)/visitors(date_range_str))*100,2)
 
 fig = go.Figure()
@@ -1380,9 +1378,9 @@ total = sum(y)
 
 if cumulative:
     y = np.cumsum(y)
-    fig = go.Figure(data=go.Scatter(x=list(range(int(min(x)-1),int(max(x)-1))), y=y/total*100))
+    fig = go.Figure(data=go.Scatter(x=list(range(int(min(x)-1),int(max(x)-1))), y=np.round(y/total*100,2)))
 else:
-    fig = go.Figure(data=go.Bar(x=list(range(int(min(x)-1),int(max(x)-1))), y=y/total*100))
+    fig = go.Figure(data=go.Bar(x=list(range(int(min(x)-1),int(max(x)-1))), y=np.round(y/total*100,2)))
 
 fig.update_layout(xaxis_title='Day',yaxis_title='Percentage of selected users (%)')
 interval_expander.plotly_chart(fig, use_container_width=True)
