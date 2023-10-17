@@ -454,6 +454,7 @@ def get_referral_data(dates):
 @st.cache_data
 def recommendation_rate(dates):
     data = get_referral_data(dates)
+    st.write(data)
     values = []
     for i in range(len(dates)):
         x = data[data['date_range']==i].sort_values('step').values
