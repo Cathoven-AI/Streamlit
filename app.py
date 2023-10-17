@@ -1298,7 +1298,7 @@ kf_freq = kf_col3.selectbox('Time frame',('Daily', 'Weekly', 'Bi-weekly', 'Month
 kf_yrange = kf_expander.slider("Y-axis range", value=(0, 5), min_value=0, max_value=20, step=1, key='kf_yrange')
 
 date_range_start, date_range_end, date_range_str = get_dates(kf_from,kf_to,kf_freq)
-kf = np.round(referred_users(date_range_str)[0],referring_users(date_range_str),2)
+kf = np.round(referred_users(date_range_str)[0]/referring_users(date_range_str),2)
 
 fig = go.Figure()
 if kf_freq=='Daily':
@@ -1321,19 +1321,19 @@ else:
 if show_trends:
     if kf_freq=='Daily':
         extra_range_start, extra_range_end, extra_range_str = get_dates(kf_from-pd.Timedelta(days=daily_window_size+1),kf_from,kf_freq)
-        extra_kf = np.round(referred_users(extra_range_str)[0],referring_users(extra_range_str),2)
+        extra_kf = np.round(referred_users(extra_range_str)[0]/referring_users(extra_range_str),2)
         kf_trend = moving_average(list(extra_kf)+list(kf),window_size=daily_window_size)[-len(kf):]
     elif kf_freq=='Weekly':
         extra_range_start, extra_range_end, extra_range_str = get_dates(kf_from-pd.Timedelta(days=(weekly_window_size)*8),kf_from,kf_freq)
-        extra_kf = np.round(referred_users(extra_range_str)[0],referring_users(extra_range_str),2)
+        extra_kf = np.round(referred_users(extra_range_str)[0]/referring_users(extra_range_str),2)
         kf_trend = moving_average(list(extra_kf)+list(kf),window_size=weekly_window_size)[-len(kf):]
     elif kf_freq=='Bi-weekly':
         extra_range_start, extra_range_end, extra_range_str = get_dates(kf_from-pd.Timedelta(days=(biweekly_window_size)*15),kf_from,kf_freq)
-        extra_kf = np.round(referred_users(extra_range_str)[0],referring_users(extra_range_str),2)
+        extra_kf = np.round(referred_users(extra_range_str)[0]/referring_users(extra_range_str),2)
         kf_trend = moving_average(list(extra_kf)+list(kf),window_size=biweekly_window_size)[-len(kf):]
     else:
         extra_range_start, extra_range_end, extra_range_str = get_dates(kf_from-pd.Timedelta(days=(monthly_window_size)*32),kf_from,kf_freq)
-        extra_kf = np.round(referred_users(extra_range_str)[0],referring_users(extra_range_str),2)
+        extra_kf = np.round(referred_users(extra_range_str)[0]/referring_users(extra_range_str),2)
         kf_trend = moving_average(list(extra_kf)+list(kf),window_size=monthly_window_size)[-len(kf):]
     fig.add_trace(go.Scatter(x=x, y=kf_trend, name='Trend', line=dict(color='firebrick', dash='dash')))
 
