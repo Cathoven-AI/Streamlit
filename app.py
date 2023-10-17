@@ -1146,20 +1146,20 @@ rgr = np.round((new_users(date_range_str)[0]/trial_users(date_range_str))*100,2)
 fig = go.Figure()
 if rgr_freq=='Daily':
     x = [x.strftime('%b-%d %a') for x in date_range_end]
-    fig.add_trace(go.Scatter(x=x, y=rgr, name='Daily Activation Rate (%)'))
+    fig.add_trace(go.Scatter(x=x, y=rgr, name='Daily Registration Rate (%)'))
     fig.update_layout(xaxis_title='Day',yaxis_title='Activation Rate (%)')
 elif rgr_freq=='Weekly':
     x = [x[0].strftime('%b %d')+"-"+x[1].strftime('%b %d') for x in zip(date_range_start,date_range_end)]
-    fig.add_trace(go.Scatter(x=x, y=rgr, name='Weekly Activation Rate (%)'))
-    fig.update_layout(xaxis_title='Week',yaxis_title='Activation Rate (%)')
+    fig.add_trace(go.Scatter(x=x, y=rgr, name='Weekly Registration Rate (%)'))
+    fig.update_layout(xaxis_title='Week',yaxis_title='Registration Rate (%)')
 elif rgr_freq=='Bi-weekly':
     x = [x[0].strftime('%b %d')+"-"+x[1].strftime('%b %d') for x in zip(date_range_start,date_range_end)]
-    fig.add_trace(go.Scatter(x=x, y=rgr, name='Bi-weekly Activation Rate (%)'))
-    fig.update_layout(xaxis_title='Bi-week',yaxis_title='Activation Rate (%)')
+    fig.add_trace(go.Scatter(x=x, y=rgr, name='Bi-weekly Registration Rate (%)'))
+    fig.update_layout(xaxis_title='Bi-week',yaxis_title='Registration Rate (%)')
 else:
     x = [x.strftime('%Y %b') for x in date_range_end]
-    fig.add_trace(go.Scatter(x=x, y=rgr, name='Monthly Activation Rate (%)'))
-    fig.update_layout(xaxis_title='Month',yaxis_title='Activation Rate (%)')
+    fig.add_trace(go.Scatter(x=x, y=rgr, name='Monthly Registration Rate (%)'))
+    fig.update_layout(xaxis_title='Month',yaxis_title='Registration Rate (%)')
 
 if show_trends:
     if rgr_freq=='Daily':
@@ -1241,6 +1241,63 @@ if show_trends:
 fig.update_layout(legend=dict(yanchor="top",y=1.2,xanchor="left",x=0.01))
 fig.update_yaxes(range=stickiness_yrange)
 stickiness_expander.plotly_chart(fig, use_container_width=True)
+
+
+
+
+
+tr_expander = st.expander("Trial Rate")
+tr_expander.write("Trial Users / Visitors")
+tr_col1, tr_col2, tr_col3 = tr_expander.columns(3)
+tr_from = tr_col1.date_input(label="From",value=default_from,key='tr_from')
+tr_to = tr_col2.date_input(label="To",value=default_to,key='tr_to')
+tr_freq = tr_col3.selectbox('Time frame',('Daily', 'Weekly', 'Bi-weekly', 'Monthly'),index=1,key='tr_freq')
+tr_yrange = tr_expander.slider("Y-axis range", value=(0, 50), min_value=0, max_value=100, step=5, key='tr_yrange')
+
+date_range_start, date_range_end, date_range_str = get_dates(tr_from,tr_to,tr_freq)
+tr = np.round((trial_users(date_range_str)[0]/visitors(date_range_str))*100,2)
+
+fig = go.Figure()
+if tr_freq=='Daily':
+    x = [x.strftime('%b-%d %a') for x in date_range_end]
+    fig.add_trace(go.Scatter(x=x, y=tr, name='Daily Trial Rate (%)'))
+    fig.update_layout(xaxis_title='Day',yaxis_title='Trial Rate (%)')
+elif tr_freq=='Weekly':
+    x = [x[0].strftime('%b %d')+"-"+x[1].strftime('%b %d') for x in zip(date_range_start,date_range_end)]
+    fig.add_trace(go.Scatter(x=x, y=tr, name='Weekly Trial Rate (%)'))
+    fig.update_layout(xaxis_title='Week',yaxis_title='Trial Rate (%)')
+elif tr_freq=='Bi-weekly':
+    x = [x[0].strftime('%b %d')+"-"+x[1].strftime('%b %d') for x in zip(date_range_start,date_range_end)]
+    fig.add_trace(go.Scatter(x=x, y=tr, name='Bi-weekly Trial Rate (%)'))
+    fig.update_layout(xaxis_title='Bi-week',yaxis_title='Trial Rate (%)')
+else:
+    x = [x.strftime('%Y %b') for x in date_range_end]
+    fig.add_trace(go.Scatter(x=x, y=tr, name='Monthly Trial Rate (%)'))
+    fig.update_layout(xaxis_title='Month',yaxis_title='Trial Rate (%)')
+
+if show_trends:
+    if tr_freq=='Daily':
+        extra_range_start, extra_range_end, extra_range_str = get_dates(tr_from-pd.Timedelta(days=daily_window_size-1),tr_from,tr_freq)
+        extra_tr = np.round((new_users(extra_range_str)[0]/trial_users(extra_range_str))*100,2)
+        tr_trend = moving_average(list(extra_tr)+list(tr),window_size=daily_window_size)[-len(tr):]
+    elif tr_freq=='Weekly':
+        extra_range_start, extra_range_end, extra_range_str = get_dates(tr_from-pd.Timedelta(days=(weekly_window_size-1)*7),tr_from,tr_freq)
+        extra_tr = np.round((new_users(extra_range_str)[0]/trial_users(extra_range_str))*100,2)
+        tr_trend = moving_average(list(extra_tr)+list(tr),window_size=weekly_window_size)[-len(tr):]
+    elif tr_freq=='Bi-weekly':
+        extra_range_start, extra_range_end, extra_range_str = get_dates(tr_from-pd.Timedelta(days=(biweekly_window_size-1)*14),tr_from,tr_freq)
+        extra_tr = np.round((new_users(extra_range_str)[0]/trial_users(extra_range_str))*100,2)
+        tr_trend = moving_average(list(extra_tr)+list(tr),window_size=biweekly_window_size)[-len(tr):]
+    else:
+        extra_range_start, extra_range_end, extra_range_str = get_dates(tr_from-pd.Timedelta(days=(monthly_window_size-1)*31),tr_from,tr_freq)
+        extra_tr = np.round((new_users(extra_range_str)[0]/trial_users(extra_range_str))*100,2)
+        tr_trend = moving_average(list(extra_tr)+list(tr),window_size=monthly_window_size)[-len(tr):]
+    fig.add_trace(go.Scatter(x=x, y=tr_trend, name='Trend', line=dict(color='firebrick', dash='dash')))
+
+fig.update_layout(legend=dict(yanchor="top",y=1.2,xanchor="left",x=0.01))
+fig.update_yaxes(range=tr_yrange)
+tr_expander.plotly_chart(fig, use_container_width=True)
+
 
 
 
