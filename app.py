@@ -1364,45 +1364,45 @@ recr_col1, recr_col2, recr_col3 = recr_expander.columns(3)
 recr_from = recr_col1.date_input(label="From",value=default_from,key='recr_from')
 recr_to = recr_col2.date_input(label="To",value=default_to,key='recr_to')
 recr_freq = recr_col3.selectbox('Time frame',('Daily', 'Weekly', 'Bi-weekly', 'Monthly'),index=1,key='recr_freq')
-recr_yrange = recr_expander.slider("Y-axis range", value=(0, 20), min_value=0, max_value=100, step=5, key='recr_yrange')
+recr_yrange = recr_expander.slider("Y-axis range", value=(0, 5), min_value=0, max_value=20, step=1, key='recr_yrange')
 
 date_range_start, date_range_end, date_range_str = get_dates(recr_from,recr_to,recr_freq)
-recr = np.round(referring_users(date_range_str)/registered_users([date[1] for date in date_range_str])*100,2)
+recr = np.round(referring_users(date_range_str)/registered_users([date[1] for date in date_range_str])*1000,2)
 
 fig = go.Figure()
 if recr_freq=='Daily':
     x = [x.strftime('%b-%d %a') for x in date_range_end]
-    fig.add_trace(go.Scatter(x=x, y=recr, name='Daily Recommendation Rate (%)'))
-    fig.update_layout(xaxis_title='Day',yaxis_title='Recommendation Rate (%)')
+    fig.add_trace(go.Scatter(x=x, y=recr, name='Daily Recommendation Rate (‰)'))
+    fig.update_layout(xaxis_title='Day',yaxis_title='Recommendation Rate (‰)')
 elif recr_freq=='Weekly':
     x = [x[0].strftime('%b %d')+"-"+x[1].strftime('%b %d') for x in zip(date_range_start,date_range_end)]
-    fig.add_trace(go.Scatter(x=x, y=recr, name='Weekly Recommendation Rate (%)'))
-    fig.update_layout(xaxis_title='Week',yaxis_title='Recommendation Rate (%)')
+    fig.add_trace(go.Scatter(x=x, y=recr, name='Weekly Recommendation Rate (‰)'))
+    fig.update_layout(xaxis_title='Week',yaxis_title='Recommendation Rate (‰)')
 elif recr_freq=='Bi-weekly':
     x = [x[0].strftime('%b %d')+"-"+x[1].strftime('%b %d') for x in zip(date_range_start,date_range_end)]
-    fig.add_trace(go.Scatter(x=x, y=recr, name='Bi-weekly Recommendation Rate (%)'))
-    fig.update_layout(xaxis_title='Bi-week',yaxis_title='Recommendation Rate (%)')
+    fig.add_trace(go.Scatter(x=x, y=recr, name='Bi-weekly Recommendation Rate (‰)'))
+    fig.update_layout(xaxis_title='Bi-week',yaxis_title='Recommendation Rate (‰)')
 else:
     x = [x.strftime('%Y %b') for x in date_range_end]
-    fig.add_trace(go.Scatter(x=x, y=recr, name='Monthly Recommendation Rate (%)'))
-    fig.update_layout(xaxis_title='Month',yaxis_title='Recommendation Rate (%)')
+    fig.add_trace(go.Scatter(x=x, y=recr, name='Monthly Recommendation Rate (‰)'))
+    fig.update_layout(xaxis_title='Month',yaxis_title='Recommendation Rate (‰)')
 
 if show_trends:
     if recr_freq=='Daily':
         extra_range_start, extra_range_end, extra_range_str = get_dates(recr_from-pd.Timedelta(days=daily_window_size+1),recr_from,recr_freq)
-        extra_recr = np.round(referring_users(extra_range_str)/registered_users([date[1] for date in extra_range_str])*100,2)
+        extra_recr = np.round(referring_users(extra_range_str)/registered_users([date[1] for date in extra_range_str])*1000,2)
         recr_trend = moving_average(list(extra_recr)+list(recr),window_size=daily_window_size)[-len(recr):]
     elif recr_freq=='Weekly':
         extra_range_start, extra_range_end, extra_range_str = get_dates(recr_from-pd.Timedelta(days=(weekly_window_size)*8),recr_from,recr_freq)
-        extra_recr = np.round(referring_users(extra_range_str)/registered_users([date[1] for date in extra_range_str])*100,2)
+        extra_recr = np.round(referring_users(extra_range_str)/registered_users([date[1] for date in extra_range_str])*1000,2)
         recr_trend = moving_average(list(extra_recr)+list(recr),window_size=weekly_window_size)[-len(recr):]
     elif recr_freq=='Bi-weekly':
         extra_range_start, extra_range_end, extra_range_str = get_dates(recr_from-pd.Timedelta(days=(biweekly_window_size)*15),recr_from,recr_freq)
-        extra_recr = np.round(referring_users(extra_range_str)/registered_users([date[1] for date in extra_range_str])*100,2)
+        extra_recr = np.round(referring_users(extra_range_str)/registered_users([date[1] for date in extra_range_str])*1000,2)
         recr_trend = moving_average(list(extra_recr)+list(recr),window_size=biweekly_window_size)[-len(recr):]
     else:
         extra_range_start, extra_range_end, extra_range_str = get_dates(recr_from-pd.Timedelta(days=(monthly_window_size)*32),recr_from,recr_freq)
-        extra_recr = np.round(referring_users(extra_range_str)/registered_users([date[1] for date in extra_range_str])*100,2)
+        extra_recr = np.round(referring_users(extra_range_str)/registered_users([date[1] for date in extra_range_str])*1000,2)
         recr_trend = moving_average(list(extra_recr)+list(recr),window_size=monthly_window_size)[-len(recr):]
     fig.add_trace(go.Scatter(x=x, y=recr_trend, name='Trend', line=dict(color='firebrick', dash='dash')))
 
