@@ -424,8 +424,9 @@ def referring_users(dates):
                 row[1] = int(row[1].split('_')[-1])+i*4
                 rows.append(row)
     data = pd.DataFrame(rows,columns=['button','date_range','value'])
-    st.write(data)
-    return data.groupby('date_range').agg(sum)['value'].sort_index().values
+    values = list(data.groupby('date_range').agg(sum)['value'].sort_index().values)
+    values = [0]*len(dates)-len(values)+values
+    return np.array(values)
 
 
 @st.cache_data
