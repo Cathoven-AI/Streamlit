@@ -383,6 +383,7 @@ def referring_users(dates):
     
     rows = []
     for i in range(int((len(date_ranges)-1)//4+1)):
+        st.write(date_ranges[i*4:(i+1)*4])
         request = RunReportRequest(
             property=f"properties/294609234",
             dimensions=[Dimension(name="customEvent:button_identifier")],
