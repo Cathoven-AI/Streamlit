@@ -6,16 +6,6 @@ import plotly.graph_objects as go
 import mysql.connector
 from cryptography.fernet import Fernet
 import base64, hashlib, json
-from google.analytics.data_v1beta import BetaAnalyticsDataClient
-from google.analytics.data_v1beta.types import (
-    DateRange,
-    Dimension,
-    Filter,
-    FilterExpression,
-    Metric,
-    RunReportRequest,
-    FilterExpressionList,
-)
 from google.analytics.data_v1alpha import AlphaAnalyticsDataClient
 from google.analytics.data_v1alpha.types import (
     DateRange,
@@ -30,7 +20,16 @@ from google.analytics.data_v1alpha.types import (
     RunFunnelReportRequest,
     StringFilter,
 )
-
+from google.analytics.data_v1beta import BetaAnalyticsDataClient
+from google.analytics.data_v1beta.types import (
+    DateRange,
+    Dimension,
+    Filter,
+    FilterExpression,
+    Metric,
+    RunReportRequest,
+    FilterExpressionList,
+)
 @st.cache_data
 def load_data(host,user,password):
     config = {
