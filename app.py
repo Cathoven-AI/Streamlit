@@ -444,6 +444,7 @@ def get_referral_data(dates):
         
         for row in response.funnel_visualization.rows:
             row = [x.value for x in row.dimension_values]+[x.value for x in row.metric_values]
+            st.write(row)
             if row[1]!='RESERVED_TOTAL':
                 row[0] = int(row[0].split('.')[0])-1
                 row[1] = int(row[1].split('_')[-1])+i*4
@@ -455,7 +456,6 @@ def get_referral_data(dates):
 @st.cache_data
 def recommendation_rate(dates):
     data = get_referral_data(dates)
-    st.write(data)
     values = []
     for i in range(len(dates)):
         try:
