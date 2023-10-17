@@ -415,7 +415,6 @@ def referring_users(dates):
             ),
         )
         response = client.run_report(request)
-        rows = []
         for row in response.rows:
             row = [x.value for x in row.dimension_values]+[x.value for x in row.metric_values]
             if len(row)==2:
