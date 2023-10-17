@@ -226,7 +226,7 @@ def subscription_users(dates):
     return len(df1[df1['pro']==True])
 
 @st.cache_data
-def new_subscription_users(dates, duration=0):
+def new_subscription_users(dates, duration=0, among=None):
     df_temp = df_pro[df_pro['webhook_code']=='BILLING.SUBSCRIPTION.ACTIVATED'].drop_duplicates()
     counts = []
     ids = []
@@ -236,7 +236,10 @@ def new_subscription_users(dates, duration=0):
             temp = df_temp[(df_temp['created'].dt.normalize()>=date[0])&(df_temp['created'].dt.normalize()<=date[1])]
         else:
             temp = df_temp[(df_temp['created'].dt.normalize()>=date[0])&(df_temp['created'].dt.normalize()<=date[1])&(df_temp['duration']==duration)]
-        ids.append(set(temp['user_id'].values))
+        new_subscription_user_ids = set(temp['user_id'].values)
+        if among is not None:
+            new_subscription_user_ids = new_subscription_user_ids.intersection(among[i])
+        ids.append(new_subscription_user_ids)
         counts.append(len(temp))
     return np.array(counts), ids
 
@@ -1274,8 +1277,8 @@ if 'Intent Users' in options:
     intent_user_count = intent_users([funnel_from.strftime('%Y-%m-%d'),funnel_to.strftime('%Y-%m-%d')])
     x.append(intent_user_count)
 if 'New Subscription Users' in options:
-    subscription_user_count, subscription_user_ids = new_subscription_users([[funnel_from.strftime('%Y-%m-%d'),funnel_to.strftime('%Y-%m-%d')]])
-    x.append(len(subscription_user_ids[0].intersection(new_user_ids[0])))
+    subscription_user_count, _ = new_subscription_users([[funnel_from.strftime('%Y-%m-%d'),funnel_to.strftime('%Y-%m-%d')]],among=new_user_ids)
+    x.append(subscription_user_count)
 
 if funnal_percentage=='Initial step':
     fig = go.Figure(go.Funnel(
@@ -1312,8 +1315,14 @@ interval_col1, interval_col2 = interval_expander.columns(2)
 interval_from = interval_col1.date_input(label="From",value=default_from,key='interval_from')
 interval_to = interval_col2.date_input(label="To",value=default_to,key='interval_to')
 intervals = second_use_interval([interval_from,interval_to])
+cumulative = interval_expander.toggle('Cumulative',key='interval_cumulative',value=True)
 y, x = np.histogram(intervals,bins=range(min(intervals)+1,max(intervals)+1))
-fig = go.Figure(data=go.Bar(x=list(range(int(min(x)-1),int(max(x)-1))), y=y/sum(y)*100))
+
+if cumulative:
+    y = np.cumsum(y)
+    fig = go.Figure(data=go.Scatter(x=list(range(int(min(x)-1),int(max(x)-1))), y=y/sum(y)*100))
+else:
+    fig = go.Figure(data=go.Bar(x=list(range(int(min(x)-1),int(max(x)-1))), y=y/sum(y)*100))
 
 fig.update_layout(xaxis_title='Day',yaxis_title='Percentage of selected users (%)')
 interval_expander.plotly_chart(fig, use_container_width=True)
