@@ -16,6 +16,20 @@ from google.analytics.data_v1beta.types import (
     RunReportRequest,
     FilterExpressionList,
 )
+from google.analytics.data_v1alpha import AlphaAnalyticsDataClient
+from google.analytics.data_v1alpha.types import (
+    DateRange,
+    Dimension,
+    Funnel,
+    FunnelBreakdown,
+    FunnelEventFilter,
+    FunnelFieldFilter,
+    FunnelFilterExpression,
+    FunnelFilterExpressionList,
+    FunnelStep,
+    RunFunnelReportRequest,
+    StringFilter,
+)
 
 @st.cache_data
 def load_data(host,user,password):
@@ -87,6 +101,7 @@ if host!='' and user!='' and password!='':
     try:
         df1, df2, df_pro = load_data(host,user,password)
         client = BetaAnalyticsDataClient().from_service_account_info(json.loads(get_credentials(host+user+password)))
+        client_alpha = AlphaAnalyticsDataClient().from_service_account_info(json.loads(get_credentials(host+user+password)))
     except Exception as e:
         st.warning(e)
         st.stop()
@@ -358,6 +373,87 @@ def intent_users(date):
     )
     response = client.run_report(request)
     return int(response.rows[0].metric_values[0].value)
+
+@st.cache_data
+def get_referral_data(dates):
+
+    date_ranges = []
+    for date in dates:
+        date_ranges.append(DateRange(start_date=date[0], end_date=date[1]))
+    
+    request = RunFunnelReportRequest(
+        property=f"properties/294609234",
+        date_ranges=date_ranges,
+        funnel=Funnel(
+            steps=[
+                FunnelStep(
+                    name="Referral",
+                    filter_expression=FunnelFilterExpression(
+                        and_group=FunnelFilterExpressionList(
+                            expressions=[
+                                FunnelFilterExpression(
+                                    funnel_field_filter=FunnelFieldFilter(
+                                        field_name="firstUserSourceMedium",
+                                        string_filter=StringFilter(
+                                            match_type=StringFilter.MatchType.CONTAINS,
+                                            case_sensitive=False,
+                                            value="referral",
+                                        ),
+                                    ),
+                                ),
+                                FunnelFilterExpression(
+                                    funnel_field_filter=FunnelFieldFilter(
+                                        field_name="newVsReturning",
+                                        string_filter=StringFilter(
+                                            match_type=StringFilter.MatchType.CONTAINS,
+                                            case_sensitive=False,
+                                            value="new",
+                                        ),
+                                    ),
+                                ),
+                            ]
+                        ),
+                        not_expression=FunnelFilterExpression(
+                                    funnel_field_filter=FunnelFieldFilter(
+                                        field_name="firstUserSourceMedium",
+                                        string_filter=StringFilter(
+                                            match_type=StringFilter.MatchType.CONTAINS,
+                                            case_sensitive=False,
+                                            value="bing.",
+                                        ),
+                                    )
+                        ),
+                    ),
+                ),
+                FunnelStep(
+                    name="Logged in",
+                    filter_expression=FunnelFilterExpression(
+                        funnel_event_filter=FunnelEventFilter(
+                            event_name="logged_in"
+                        )
+                    ),
+                ),
+            ]
+        ),
+    )
+    response = client_alpha.run_funnel_report(request)
+
+    rows = []
+    for row in response.funnel_visualization.rows:
+        rows.append([x.value for x in row.dimension_values]+[x.value for x in row.metric_values])
+    data = pd.DataFrame(rows,columns=['step','date_range','value'])
+    data['step'] = data['step'].apply(lambda x: int(x.split('.')[0])-1)
+    return data
+
+
+@st.cache_data
+def recommendation_rate(dates):
+    data = get_referral_data(dates)
+    values = []
+    for i in range(len(dates)):
+        x = data[data['date_range']==f'date_range_{i}'].sort_values('step').values
+        values.append(x[-1]/x[0])
+    return np.array(values)
 
 
 @st.cache_data
@@ -1130,64 +1226,6 @@ er_expander.plotly_chart(fig, use_container_width=True)
 
 
 
-
-
-rgr_expander = st.expander("Registration Rate")
-rgr_expander.write("New users / Trial Users")
-rgr_col1, rgr_col2, rgr_col3 = rgr_expander.columns(3)
-rgr_from = rgr_col1.date_input(label="From",value=default_from,key='rgr_from')
-rgr_to = rgr_col2.date_input(label="To",value=default_to,key='rgr_to')
-rgr_freq = rgr_col3.selectbox('Time frame',('Daily', 'Weekly', 'Bi-weekly', 'Monthly'),index=1,key='rgr_freq')
-rgr_yrange = rgr_expander.slider("Y-axis range", value=(0, 100), min_value=0, max_value=100, step=5, key='rgr_yrange')
-
-date_range_start, date_range_end, date_range_str = get_dates(rgr_from,rgr_to,rgr_freq)
-rgr = np.round((new_users(date_range_str)[0]/trial_users(date_range_str))*100,2)
-
-fig = go.Figure()
-if rgr_freq=='Daily':
-    x = [x.strftime('%b-%d %a') for x in date_range_end]
-    fig.add_trace(go.Scatter(x=x, y=rgr, name='Daily Registration Rate (%)'))
-    fig.update_layout(xaxis_title='Day',yaxis_title='Activation Rate (%)')
-elif rgr_freq=='Weekly':
-    x = [x[0].strftime('%b %d')+"-"+x[1].strftime('%b %d') for x in zip(date_range_start,date_range_end)]
-    fig.add_trace(go.Scatter(x=x, y=rgr, name='Weekly Registration Rate (%)'))
-    fig.update_layout(xaxis_title='Week',yaxis_title='Registration Rate (%)')
-elif rgr_freq=='Bi-weekly':
-    x = [x[0].strftime('%b %d')+"-"+x[1].strftime('%b %d') for x in zip(date_range_start,date_range_end)]
-    fig.add_trace(go.Scatter(x=x, y=rgr, name='Bi-weekly Registration Rate (%)'))
-    fig.update_layout(xaxis_title='Bi-week',yaxis_title='Registration Rate (%)')
-else:
-    x = [x.strftime('%Y %b') for x in date_range_end]
-    fig.add_trace(go.Scatter(x=x, y=rgr, name='Monthly Registration Rate (%)'))
-    fig.update_layout(xaxis_title='Month',yaxis_title='Registration Rate (%)')
-
-if show_trends:
-    if rgr_freq=='Daily':
-        extra_range_start, extra_range_end, extra_range_str = get_dates(rgr_from-pd.Timedelta(days=daily_window_size-1),rgr_from,rgr_freq)
-        extra_rgr = np.round((new_users(extra_range_str)[0]/trial_users(extra_range_str))*100,2)
-        rgr_trend = moving_average(list(extra_rgr)+list(rgr),window_size=daily_window_size)[-len(rgr):]
-    elif rgr_freq=='Weekly':
-        extra_range_start, extra_range_end, extra_range_str = get_dates(rgr_from-pd.Timedelta(days=(weekly_window_size-1)*7),rgr_from,rgr_freq)
-        extra_rgr = np.round((new_users(extra_range_str)[0]/trial_users(extra_range_str))*100,2)
-        rgr_trend = moving_average(list(extra_rgr)+list(rgr),window_size=weekly_window_size)[-len(rgr):]
-    elif rgr_freq=='Bi-weekly':
-        extra_range_start, extra_range_end, extra_range_str = get_dates(rgr_from-pd.Timedelta(days=(biweekly_window_size-1)*14),rgr_from,rgr_freq)
-        extra_rgr = np.round((new_users(extra_range_str)[0]/trial_users(extra_range_str))*100,2)
-        rgr_trend = moving_average(list(extra_rgr)+list(rgr),window_size=biweekly_window_size)[-len(rgr):]
-    else:
-        extra_range_start, extra_range_end, extra_range_str = get_dates(rgr_from-pd.Timedelta(days=(monthly_window_size-1)*31),rgr_from,rgr_freq)
-        extra_rgr = np.round((new_users(extra_range_str)[0]/trial_users(extra_range_str))*100,2)
-        rgr_trend = moving_average(list(extra_rgr)+list(rgr),window_size=monthly_window_size)[-len(rgr):]
-    fig.add_trace(go.Scatter(x=x, y=rgr_trend, name='Trend', line=dict(color='firebrick', dash='dash')))
-
-fig.update_layout(legend=dict(yanchor="top",y=1.2,xanchor="left",x=0.01))
-fig.update_yaxes(range=rgr_yrange)
-rgr_expander.plotly_chart(fig, use_container_width=True)
-
-
-
-
-
 sr_expander = st.expander("New Subscription Rate")
 sr_expander.write("New users who subscribe / New users")
 sr_col1, sr_col2, sr_col3 = sr_expander.columns(3)
@@ -1250,6 +1288,121 @@ if show_trends:
 fig.update_layout(legend=dict(yanchor="top",y=1.2,xanchor="left",x=0.01))
 fig.update_yaxes(range=sr_yrange)
 sr_expander.plotly_chart(fig, use_container_width=True)
+
+
+
+recr_expander = st.expander("Recommendation Rate")
+recr_expander.write("New users / Trial Users")
+recr_col1, recr_col2, recr_col3 = recr_expander.columns(3)
+recr_from = recr_col1.date_input(label="From",value=default_from,key='recr_from')
+recr_to = recr_col2.date_input(label="To",value=default_to,key='recr_to')
+recr_freq = recr_col3.selectbox('Time frame',('Daily', 'Weekly', 'Bi-weekly', 'Monthly'),index=1,key='recr_freq')
+recr_yrange = recr_expander.slider("Y-axis range", value=(0, 20), min_value=0, max_value=100, step=5, key='recr_yrange')
+
+date_range_start, date_range_end, date_range_str = get_dates(recr_from,recr_to,recr_freq)
+recr = np.round(recommendation_rate(date_range_str)*100,2)
+
+fig = go.Figure()
+if recr_freq=='Daily':
+    x = [x.strftime('%b-%d %a') for x in date_range_end]
+    fig.add_trace(go.Scatter(x=x, y=recr, name='Daily Recommendation Rate (%)'))
+    fig.update_layout(xaxis_title='Day',yaxis_title='Recommendation Rate (%)')
+elif recr_freq=='Weekly':
+    x = [x[0].strftime('%b %d')+"-"+x[1].strftime('%b %d') for x in zip(date_range_start,date_range_end)]
+    fig.add_trace(go.Scatter(x=x, y=recr, name='Weekly Recommendation Rate (%)'))
+    fig.update_layout(xaxis_title='Week',yaxis_title='Recommendation Rate (%)')
+elif recr_freq=='Bi-weekly':
+    x = [x[0].strftime('%b %d')+"-"+x[1].strftime('%b %d') for x in zip(date_range_start,date_range_end)]
+    fig.add_trace(go.Scatter(x=x, y=recr, name='Bi-weekly Recommendation Rate (%)'))
+    fig.update_layout(xaxis_title='Bi-week',yaxis_title='Recommendation Rate (%)')
+else:
+    x = [x.strftime('%Y %b') for x in date_range_end]
+    fig.add_trace(go.Scatter(x=x, y=recr, name='Monthly Recommendation Rate (%)'))
+    fig.update_layout(xaxis_title='Month',yaxis_title='Recommendation Rate (%)')
+
+if show_trends:
+    if recr_freq=='Daily':
+        extra_range_start, extra_range_end, extra_range_str = get_dates(recr_from-pd.Timedelta(days=daily_window_size-1),recr_from,recr_freq)
+        extra_recr = np.round(recommendation_rate(extra_range_str)*100,2)
+        recr_trend = moving_average(list(extra_recr)+list(recr),window_size=daily_window_size)[-len(recr):]
+    elif recr_freq=='Weekly':
+        extra_range_start, extra_range_end, extra_range_str = get_dates(recr_from-pd.Timedelta(days=(weekly_window_size-1)*7),recr_from,recr_freq)
+        extra_recr = np.round(recommendation_rate(extra_range_str)*100,2)
+        recr_trend = moving_average(list(extra_recr)+list(recr),window_size=weekly_window_size)[-len(recr):]
+    elif recr_freq=='Bi-weekly':
+        extra_range_start, extra_range_end, extra_range_str = get_dates(recr_from-pd.Timedelta(days=(biweekly_window_size-1)*14),recr_from,recr_freq)
+        extra_recr = np.round(recommendation_rate(extra_range_str)*100,2)
+        recr_trend = moving_average(list(extra_recr)+list(recr),window_size=biweekly_window_size)[-len(recr):]
+    else:
+        extra_range_start, extra_range_end, extra_range_str = get_dates(recr_from-pd.Timedelta(days=(monthly_window_size-1)*31),recr_from,recr_freq)
+        extra_recr = np.round(recommendation_rate(extra_range_str)*100,2)
+        recr_trend = moving_average(list(extra_recr)+list(recr),window_size=monthly_window_size)[-len(recr):]
+    fig.add_trace(go.Scatter(x=x, y=recr_trend, name='Trend', line=dict(color='firebrick', dash='dash')))
+
+fig.update_layout(legend=dict(yanchor="top",y=1.2,xanchor="left",x=0.01))
+fig.update_yaxes(range=recr_yrange)
+recr_expander.plotly_chart(fig, use_container_width=True)
+
+
+
+
+rgr_expander = st.expander("Registration Rate")
+rgr_expander.write("New users / Trial Users")
+rgr_col1, rgr_col2, rgr_col3 = rgr_expander.columns(3)
+rgr_from = rgr_col1.date_input(label="From",value=default_from,key='rgr_from')
+rgr_to = rgr_col2.date_input(label="To",value=default_to,key='rgr_to')
+rgr_freq = rgr_col3.selectbox('Time frame',('Daily', 'Weekly', 'Bi-weekly', 'Monthly'),index=1,key='rgr_freq')
+rgr_yrange = rgr_expander.slider("Y-axis range", value=(0, 100), min_value=0, max_value=100, step=5, key='rgr_yrange')
+
+date_range_start, date_range_end, date_range_str = get_dates(rgr_from,rgr_to,rgr_freq)
+rgr = np.round((new_users(date_range_str)[0]/trial_users(date_range_str))*100,2)
+
+fig = go.Figure()
+if rgr_freq=='Daily':
+    x = [x.strftime('%b-%d %a') for x in date_range_end]
+    fig.add_trace(go.Scatter(x=x, y=rgr, name='Daily Registration Rate (%)'))
+    fig.update_layout(xaxis_title='Day',yaxis_title='Registration Rate (%)')
+elif rgr_freq=='Weekly':
+    x = [x[0].strftime('%b %d')+"-"+x[1].strftime('%b %d') for x in zip(date_range_start,date_range_end)]
+    fig.add_trace(go.Scatter(x=x, y=rgr, name='Weekly Registration Rate (%)'))
+    fig.update_layout(xaxis_title='Week',yaxis_title='Registration Rate (%)')
+elif rgr_freq=='Bi-weekly':
+    x = [x[0].strftime('%b %d')+"-"+x[1].strftime('%b %d') for x in zip(date_range_start,date_range_end)]
+    fig.add_trace(go.Scatter(x=x, y=rgr, name='Bi-weekly Registration Rate (%)'))
+    fig.update_layout(xaxis_title='Bi-week',yaxis_title='Registration Rate (%)')
+else:
+    x = [x.strftime('%Y %b') for x in date_range_end]
+    fig.add_trace(go.Scatter(x=x, y=rgr, name='Monthly Registration Rate (%)'))
+    fig.update_layout(xaxis_title='Month',yaxis_title='Registration Rate (%)')
+
+if show_trends:
+    if rgr_freq=='Daily':
+        extra_range_start, extra_range_end, extra_range_str = get_dates(rgr_from-pd.Timedelta(days=daily_window_size-1),rgr_from,rgr_freq)
+        extra_rgr = np.round((new_users(extra_range_str)[0]/trial_users(extra_range_str))*100,2)
+        rgr_trend = moving_average(list(extra_rgr)+list(rgr),window_size=daily_window_size)[-len(rgr):]
+    elif rgr_freq=='Weekly':
+        extra_range_start, extra_range_end, extra_range_str = get_dates(rgr_from-pd.Timedelta(days=(weekly_window_size-1)*7),rgr_from,rgr_freq)
+        extra_rgr = np.round((new_users(extra_range_str)[0]/trial_users(extra_range_str))*100,2)
+        rgr_trend = moving_average(list(extra_rgr)+list(rgr),window_size=weekly_window_size)[-len(rgr):]
+    elif rgr_freq=='Bi-weekly':
+        extra_range_start, extra_range_end, extra_range_str = get_dates(rgr_from-pd.Timedelta(days=(biweekly_window_size-1)*14),rgr_from,rgr_freq)
+        extra_rgr = np.round((new_users(extra_range_str)[0]/trial_users(extra_range_str))*100,2)
+        rgr_trend = moving_average(list(extra_rgr)+list(rgr),window_size=biweekly_window_size)[-len(rgr):]
+    else:
+        extra_range_start, extra_range_end, extra_range_str = get_dates(rgr_from-pd.Timedelta(days=(monthly_window_size-1)*31),rgr_from,rgr_freq)
+        extra_rgr = np.round((new_users(extra_range_str)[0]/trial_users(extra_range_str))*100,2)
+        rgr_trend = moving_average(list(extra_rgr)+list(rgr),window_size=monthly_window_size)[-len(rgr):]
+    fig.add_trace(go.Scatter(x=x, y=rgr_trend, name='Trend', line=dict(color='firebrick', dash='dash')))
+
+fig.update_layout(legend=dict(yanchor="top",y=1.2,xanchor="left",x=0.01))
+fig.update_yaxes(range=rgr_yrange)
+rgr_expander.plotly_chart(fig, use_container_width=True)
+
+
+
+
+
+
 
 
 
