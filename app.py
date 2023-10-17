@@ -392,7 +392,7 @@ def user_source(date):
     request = RunReportRequest(
         property=f"properties/294609234",
         dimensions=[Dimension(name="firstUserSourceMedium")],
-        metrics=[Metric(name="totalUsers"),Metric(name="sessions")],
+        metrics=[Metric(name="newUsers"),Metric(name="sessions")],
         date_ranges=[DateRange(start_date=date[0], end_date=date[1])],
     )
     response = client.run_report(request)
