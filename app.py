@@ -1188,6 +1188,65 @@ rgr_expander.plotly_chart(fig, use_container_width=True)
 
 
 
+sr_expander = st.expander("New Subscription Rate")
+sr_expander.write("New users who subscribe / New users")
+sr_col1, sr_col2, sr_col3 = sr_expander.columns(3)
+sr_from = sr_col1.date_input(label="From",value=default_from,key='sr_from')
+sr_to = sr_col2.date_input(label="To",value=default_to,key='sr_to')
+sr_freq = sr_col3.selectbox('Time frame',('Daily', 'Weekly', 'Bi-weekly', 'Monthly'),index=1,key='sr_freq')
+sr_yrange = sr_expander.slider("Y-axis range", value=(0, 100), min_value=0, max_value=100, step=5, key='sr_yrange')
+
+date_range_start, date_range_end, date_range_str = get_dates(sr_from,sr_to,sr_freq)
+
+new_user_count, new_user_ids = new_users([[sr_from.strftime('%Y-%m-%d'),sr_to.strftime('%Y-%m-%d')]])
+subscription_user_count, _ = new_subscription_users([[sr_from.strftime('%Y-%m-%d'),sr_to.strftime('%Y-%m-%d')]],among=new_user_ids)
+sr = np.round(subscription_user_count/new_user_count*100,2)
+
+fig = go.Figure()
+if sr_freq=='Daily':
+    x = [x.strftime('%b-%d %a') for x in date_range_end]
+    fig.add_trace(go.Scatter(x=x, y=sr, name='Daily New Subscription Rate (%)'))
+    fig.update_layout(xaxis_title='Day',yaxis_title='New Subscription Rate (%)')
+elif sr_freq=='Weekly':
+    x = [x[0].strftime('%b %d')+"-"+x[1].strftime('%b %d') for x in zip(date_range_start,date_range_end)]
+    fig.add_trace(go.Scatter(x=x, y=sr, name='Weekly New Subscription Rate (%)'))
+    fig.update_layout(xaxis_title='Week',yaxis_title='New Subscription Rate (%)')
+elif sr_freq=='Bi-weekly':
+    x = [x[0].strftime('%b %d')+"-"+x[1].strftime('%b %d') for x in zip(date_range_start,date_range_end)]
+    fig.add_trace(go.Scatter(x=x, y=sr, name='Bi-weekly New Subscription Rate (%)'))
+    fig.update_layout(xaxis_title='Bi-week',yaxis_title='New Subscription Rate (%)')
+else:
+    x = [x.strftime('%Y %b') for x in date_range_end]
+    fig.add_trace(go.Scatter(x=x, y=sr, name='Monthly New Subscription Rate (%)'))
+    fig.update_layout(xaxis_title='Month',yaxis_title='New Subscription Rate (%)')
+
+if show_trends:
+    if sr_freq=='Daily':
+        extra_range_start, extra_range_end, extra_range_str = get_dates(sr_from-pd.Timedelta(days=daily_window_size-1),sr_from,sr_freq)
+        extra_sr = np.round(activation_rate(extra_range_str)*100,2)
+        sr_trend = moving_average(list(extra_sr)+list(sr),window_size=daily_window_size)[-len(sr):]
+    elif sr_freq=='Weekly':
+        extra_range_start, extra_range_end, extra_range_str = get_dates(sr_from-pd.Timedelta(days=(weekly_window_size-1)*7),sr_from,sr_freq)
+        extra_sr = np.round(activation_rate(extra_range_str)*100,2)
+        sr_trend = moving_average(list(extra_sr)+list(sr),window_size=weekly_window_size)[-len(sr):]
+    elif sr_freq=='Bi-weekly':
+        extra_range_start, extra_range_end, extra_range_str = get_dates(sr_from-pd.Timedelta(days=(biweekly_window_size-1)*14),sr_from,sr_freq)
+        extra_sr = np.round(activation_rate(extra_range_str)*100,2)
+        sr_trend = moving_average(list(extra_sr)+list(sr),window_size=biweekly_window_size)[-len(sr):]
+    else:
+        extra_range_start, extra_range_end, extra_range_str = get_dates(sr_from-pd.Timedelta(days=(monthly_window_size-1)*31),sr_from,sr_freq)
+        extra_sr = np.round(activation_rate(extra_range_str)*100,2)
+        sr_trend = moving_average(list(extra_sr)+list(sr),window_size=monthly_window_size)[-len(sr):]
+    fig.add_trace(go.Scatter(x=x, y=sr_trend, name='Trend', line=dict(color='firebrick', dash='dash')))
+
+fig.update_layout(legend=dict(yanchor="top",y=1.2,xanchor="left",x=0.01))
+fig.update_yaxes(range=sr_yrange)
+sr_expander.plotly_chart(fig, use_container_width=True)
+
+
+
+
+
 stickiness_expander = st.expander("Stickiness")
 stickiness_expander.write("DAU/MAU or WAU/MAU")
 stickiness_col1, stickiness_col2, stickiness_col3 = stickiness_expander.columns(3)
