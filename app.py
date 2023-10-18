@@ -532,7 +532,7 @@ def get_visitor_funnel(date):
 
     request = RunFunnelReportRequest(
         property=f"properties/294609234",
-        date_ranges=[FunnelDateRange(start_date=date[0], end_date=date[1])],
+        date_ranges=FunnelDateRange(start_date=date[0], end_date=date[1]),
         funnel=Funnel(
             steps=[
                 FunnelStep(
@@ -1188,7 +1188,7 @@ vu_col1, vu_col2, vu_col3 = vu_expander.columns(3)
 vu_from = vu_col1.date_input(label="From",value=default_from,key='vu_from')
 vu_to = vu_col2.date_input(label="To",value=default_to,key='vu_to')
 vu_freq = vu_col3.selectbox('Time frame',('Daily', 'Weekly', 'Bi-weekly', 'Monthly'),index=1,key='vu_freq')
-vu_yrange = vu_expander.slider("Y-axis range", value=(0, 500), min_value=0, max_value=10000, step=50, key='vu_yrange')
+vu_yrange = vu_expander.slider("Y-axis range", value=(0, 1000), min_value=0, max_value=20000, step=100, key='vu_yrange')
 
 date_range_start, date_range_end, date_range_str = get_dates(vu_from,vu_to,vu_freq)
 
@@ -1707,9 +1707,9 @@ funnel_from = funnel_col1.date_input(label="From",value=default_from,key='funnel
 funnel_to = funnel_col2.date_input(label="To",value=default_to,key='funnel_to')
 funnal_percentage = funnel_col3.selectbox("Show percentage of",('Initial step', 'Previous step'),key='funnel_percentage')
 if pd.to_datetime(funnel_from.strftime('%Y-%m-%d'))>=pd.to_datetime('2023-08-15'):
-    default_options = ["All Visitors","Hub Pilgrims","Hub Witnesses","Trial Users", "New Users", "New Active Users", "Intent Users", "New Subscription Users"]
+    default_options = ["Hub Witnesses","Trial Users", "New Users", "New Active Users", "Intent Users", "New Subscription Users"]
 else:
-    default_options = ["All Visitors","Hub Pilgrims","Trial Users", "New Users", "New Active Users", "New Subscription Users"]
+    default_options = ["All Visitors","Trial Users", "New Users", "New Active Users", "New Subscription Users"]
 all_options = ["All Visitors","Hub Pilgrims","Hub Witnesses","Trial Users", "New Users", "New Active Users", "Intent Users", "New Subscription Users"]
 options = funnel_expander.multiselect('Steps', options=all_options, default=default_options)
 options = [x for x in all_options if x in options]
