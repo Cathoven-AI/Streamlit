@@ -580,7 +580,6 @@ def get_visitor_funnel(dates):
     data = pd.DataFrame(rows,columns=['step','date_range','value']).sort_values(['date_range','step'])
     data = np.array([g['value'].values for _,g in data.groupby('date_range')],dtype=int)
     data = [[np.nan]*3]*(len(dates)-len(data))+list(data)
-    st.write(np.array(data))
     return np.array(data)
 
 
