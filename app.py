@@ -1710,7 +1710,7 @@ if pd.to_datetime(funnel_from.strftime('%Y-%m-%d'))>=pd.to_datetime('2023-08-15'
     default_options = ["All Visitors","Hub Pilgrims","Hub Witnesses","Trial Users", "New Users", "New Active Users", "Intent Users", "New Subscription Users"]
 else:
     default_options = ["All Visitors","Hub Pilgrims","Trial Users", "New Users", "New Active Users", "New Subscription Users"]
-all_options = ["All Visitors","Hub Loader","Hub Arriver","Visitors","Trial Users", "New Users", "New Active Users", "Intent Users", "New Subscription Users"]
+all_options = ["All Visitors","Hub Pilgrims","Hub Witnesses","Trial Users", "New Users", "New Active Users", "Intent Users", "New Subscription Users"]
 options = funnel_expander.multiselect('Steps', options=all_options, default=default_options)
 options = [x for x in all_options if x in options]
 
