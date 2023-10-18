@@ -770,6 +770,7 @@ default_from = default_to-pd.Timedelta(days=63)
 
 
 au_expander = st.expander("Active Users")
+st.write(au_expander.expanded)
 au_col1, au_col2, au_col3 = au_expander.columns(3)
 au_from = au_col1.date_input(label="From",value=default_from,key='au_from')
 au_to = au_col2.date_input(label="To",value=default_to,key='au_to')
