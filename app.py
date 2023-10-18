@@ -532,7 +532,7 @@ def get_visitor_funnel(date):
 
     request = RunFunnelReportRequest(
         property=f"properties/294609234",
-        date_ranges=FunnelDateRange(start_date=date[0], end_date=date[1]),
+        date_ranges=[FunnelDateRange(start_date=date[0], end_date=date[1])],
         funnel=Funnel(
             steps=[
                 FunnelStep(
