@@ -8,8 +8,6 @@ from cryptography.fernet import Fernet
 import base64, hashlib, json
 from google.analytics.data_v1alpha import AlphaAnalyticsDataClient
 from google.analytics.data_v1alpha.types import (
-    DateRange,
-    Dimension,
     Funnel,
     FunnelBreakdown,
     FunnelEventFilter,
@@ -20,6 +18,9 @@ from google.analytics.data_v1alpha.types import (
     RunFunnelReportRequest,
     StringFilter,
 )
+from google.analytics.data_v1alpha.types import DateRange as FunnelDateRange
+from google.analytics.data_v1alpha.types import Dimension as FunnelDimention
+
 from google.analytics.data_v1beta import BetaAnalyticsDataClient
 from google.analytics.data_v1beta.types import (
     DateRange,
@@ -30,6 +31,8 @@ from google.analytics.data_v1beta.types import (
     RunReportRequest,
     FilterExpressionList,
 )
+
+
 @st.cache_data
 def load_data(host,user,password):
     config = {
@@ -516,6 +519,64 @@ def get_referral_data(dates):
                 rows.append(row)
     data = pd.DataFrame(rows,columns=['step','date_range','value'])
     return data
+
+@st.cache_data
+def get_visitor_funnel(date):
+
+    #date_ranges = []
+    #for date in dates:
+    #    date_ranges.append(FunnelDateRange(start_date=date[0], end_date=date[1]))
+    
+    rows = []
+    #for i in range(int((len(date_ranges)-1)//4+1)):
+
+    request = RunFunnelReportRequest(
+        property=f"properties/294609234",
+        date_ranges=FunnelDateRange(start_date=date[0], end_date=date[1]),
+        funnel=Funnel(
+            steps=[
+                FunnelStep(
+                    name="First Visit",
+                    filter_expression=FunnelFilterExpression(
+                        funnel_event_filter=FunnelEventFilter(
+                            event_name="first_visit"
+                        )
+                    ),
+                ),
+            FunnelStep(
+                    name="Open Hub",
+                    filter_expression=FunnelFilterExpression(
+                        funnel_field_filter=FunnelFieldFilter(
+                            field_name="pageLocation",
+                            string_filter=StringFilter(
+                                match_type=StringFilter.MatchType.CONTAINS,
+                                case_sensitive=False,
+                                value="hub.",
+                            ),
+                        )
+                    ),
+                ),
+                FunnelStep(
+                    name="Hub Loaded",
+                    filter_expression=FunnelFilterExpression(
+                        funnel_event_filter=FunnelEventFilter(
+                            event_name="hub_loaded"
+                        )
+                    ),
+                ),
+            ]
+        ),
+    )
+    response = client_alpha.run_funnel_report(request)
+
+    
+    for row in response.funnel_visualization.rows:
+        row = [x.value for x in row.dimension_values]+[x.value for x in row.metric_values]
+        if row[1]!='RESERVED_TOTAL':
+            row[0] = int(row[0].split('.')[0])-1
+            rows.append(row)
+    data = pd.DataFrame(rows,columns=['step','value']).sort_values('step')
+    return data['value'].values
 
 
 @st.cache_data
@@ -1646,17 +1707,20 @@ funnel_from = funnel_col1.date_input(label="From",value=default_from,key='funnel
 funnel_to = funnel_col2.date_input(label="To",value=default_to,key='funnel_to')
 funnal_percentage = funnel_col3.selectbox("Show percentage of",('Initial step', 'Previous step'),key='funnel_percentage')
 if pd.to_datetime(funnel_from.strftime('%Y-%m-%d'))>=pd.to_datetime('2023-08-15'):
-    default_options = ["Visitors","Trial Users", "New Users", "New Active Users", "Intent Users", "New Subscription Users"]
+    default_options = ["All Visitors","Hub Pilgrims","Hub Witnesses","Trial Users", "New Users", "New Active Users", "Intent Users", "New Subscription Users"]
 else:
-    default_options = ["Visitors","Trial Users", "New Users", "New Active Users", "New Subscription Users"]
-all_options = ["Visitors","Trial Users", "New Users", "New Active Users", "Intent Users", "New Subscription Users"]
+    default_options = ["All Visitors","Hub Pilgrims","Trial Users", "New Users", "New Active Users", "New Subscription Users"]
+all_options = ["All Visitors","Hub Loader","Hub Arriver","Visitors","Trial Users", "New Users", "New Active Users", "Intent Users", "New Subscription Users"]
 options = funnel_expander.multiselect('Steps', options=all_options, default=default_options)
 options = [x for x in all_options if x in options]
 
 x = []
-if 'Visitors' in options:
-    visitor_count = visitors([[funnel_from.strftime('%Y-%m-%d'),funnel_to.strftime('%Y-%m-%d')]])
-    x.append(visitor_count[0])
+if 'All Visitors' in options or 'Hub Pilgrims' in options or 'Hub Witnesses' in options:
+    visitor_count, pilgrim_count, witness_count = get_visitor_funnel([funnel_from.strftime('%Y-%m-%d'),funnel_to.strftime('%Y-%m-%d')])
+    temp_counts = [visitor_count, pilgrim_count, witness_count]
+    for i, option in enumerate(["All Visitors","Hub Pilgrims","Hub Witnesses"]):
+        if option in options:
+            x.append(temp_counts[i])
 if 'Trial Users' in options:
     trial_user_count = trial_users([[funnel_from.strftime('%Y-%m-%d'),funnel_to.strftime('%Y-%m-%d')]])
     x.append(trial_user_count[0])
