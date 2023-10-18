@@ -578,7 +578,7 @@ def get_visitor_funnel(dates):
                 row[1] = int(row[1].split('_')[-1])+i*4
                 rows.append(row)
     data = pd.DataFrame(rows,columns=['step','date_range','value']).sort_values(['date_range','step'])
-    return np.array([g['value'].values for _,g in data.groupby('date_range')])
+    return np.array([g['value'].values for _,g in data.groupby('date_range')],dtype=int)
 
 
 @st.cache_data
