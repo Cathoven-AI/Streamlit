@@ -1188,7 +1188,7 @@ vu_col1, vu_col2, vu_col3 = vu_expander.columns(3)
 vu_from = vu_col1.date_input(label="From",value=default_from,key='vu_from')
 vu_to = vu_col2.date_input(label="To",value=default_to,key='vu_to')
 vu_freq = vu_col3.selectbox('Time frame',('Daily', 'Weekly', 'Bi-weekly', 'Monthly'),index=1,key='vu_freq')
-vu_yrange = vu_expander.slider("Y-axis range", value=(0, 1000), min_value=0, max_value=20000, step=100, key='vu_yrange')
+vu_yrange = vu_expander.slider("Y-axis range", value=(0, 3000), min_value=0, max_value=20000, step=100, key='vu_yrange')
 
 date_range_start, date_range_end, date_range_str = get_dates(vu_from,vu_to,vu_freq)
 
