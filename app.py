@@ -1661,9 +1661,9 @@ def tr_visitors(date_range,visitor_type):
     else:
         data = get_visitor_funnel(date_range)
         if visitor_type=='Hub pilgrims':
-            visitor_count = data[:,1]
+            visitor_count = data[:,1].reshape(-1,1)
         else:
-            visitor_count = data[:,2]
+            visitor_count = data[:,2].reshape(-1,1)
     return visitor_count
 visitor_count = tr_visitors(date_range_str,tr_visitor_type)
 tr = np.round((trial_users(date_range_str)/visitor_count)*100,2)
