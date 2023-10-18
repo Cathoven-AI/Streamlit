@@ -521,62 +521,64 @@ def get_referral_data(dates):
     return data
 
 @st.cache_data
-def get_visitor_funnel(date):
+def get_visitor_funnel(dates):
 
-    #date_ranges = []
-    #for date in dates:
-    #    date_ranges.append(FunnelDateRange(start_date=date[0], end_date=date[1]))
+    date_ranges = []
+    for date in dates:
+        date_ranges.append(FunnelDateRange(start_date=date[0], end_date=date[1]))
     
     rows = []
-    #for i in range(int((len(date_ranges)-1)//4+1)):
-
-    request = RunFunnelReportRequest(
-        property=f"properties/294609234",
-        date_ranges=[FunnelDateRange(start_date=date[0], end_date=date[1])],
-        funnel=Funnel(
-            steps=[
+    for i in range(int((len(date_ranges)-1)//4+1)):
+        request = RunFunnelReportRequest(
+            property=f"properties/294609234",
+            date_ranges=date_ranges[i*4:(i+1)*4],
+            funnel=Funnel(
+                steps=[
+                    FunnelStep(
+                        name="First Visit",
+                        filter_expression=FunnelFilterExpression(
+                            funnel_event_filter=FunnelEventFilter(
+                                event_name="first_visit"
+                            )
+                        ),
+                    ),
                 FunnelStep(
-                    name="First Visit",
-                    filter_expression=FunnelFilterExpression(
-                        funnel_event_filter=FunnelEventFilter(
-                            event_name="first_visit"
-                        )
+                        name="Open Hub",
+                        filter_expression=FunnelFilterExpression(
+                            funnel_field_filter=FunnelFieldFilter(
+                                field_name="pageLocation",
+                                string_filter=StringFilter(
+                                    match_type=StringFilter.MatchType.CONTAINS,
+                                    case_sensitive=False,
+                                    value="hub.",
+                                ),
+                            )
+                        ),
                     ),
-                ),
-            FunnelStep(
-                    name="Open Hub",
-                    filter_expression=FunnelFilterExpression(
-                        funnel_field_filter=FunnelFieldFilter(
-                            field_name="pageLocation",
-                            string_filter=StringFilter(
-                                match_type=StringFilter.MatchType.CONTAINS,
-                                case_sensitive=False,
-                                value="hub.",
-                            ),
-                        )
+                    FunnelStep(
+                        name="Hub Loaded",
+                        filter_expression=FunnelFilterExpression(
+                            funnel_event_filter=FunnelEventFilter(
+                                event_name="hub_loaded"
+                            )
+                        ),
                     ),
-                ),
-                FunnelStep(
-                    name="Hub Loaded",
-                    filter_expression=FunnelFilterExpression(
-                        funnel_event_filter=FunnelEventFilter(
-                            event_name="hub_loaded"
-                        )
-                    ),
-                ),
-            ]
-        ),
-    )
-    response = client_alpha.run_funnel_report(request)
+                ]
+            ),
+        )
+        response = client_alpha.run_funnel_report(request)
 
-    
-    for row in response.funnel_visualization.rows:
-        row = [x.value for x in row.dimension_values]+[x.value for x in row.metric_values]
-        if row[1]!='RESERVED_TOTAL':
-            row[0] = int(row[0].split('.')[0])-1
-            rows.append(row)
-    data = pd.DataFrame(rows,columns=['step','value']).sort_values('step')
-    return data['value'].values
+        
+        for row in response.funnel_visualization.rows:
+            row = [x.value for x in row.dimension_values]+[x.value for x in row.metric_values]
+            if len(row)==2:
+                row = row[:1]+["0"]+row[-1:]
+            if row[1]!='RESERVED_TOTAL':
+                row[0] = int(row[0].split('.')[0])-1
+                row[1] = int(row[1].split('_')[-1])+i*4
+                rows.append(row)
+    data = pd.DataFrame(rows,columns=['step','date_range','value']).sort_values(['date_range','step'])
+    return np.array([g['value'].values for _,g in data.groupby('date_range')])
 
 
 @st.cache_data
@@ -1645,14 +1647,26 @@ stickiness_expander.plotly_chart(fig, use_container_width=True)
 
 tr_expander = st.expander("Trial Rate")
 tr_expander.write("Trial Users / Visitors")
-tr_col1, tr_col2, tr_col3 = tr_expander.columns(3)
+tr_col1, tr_col2, tr_col3, tr_col4 = tr_expander.columns(4)
 tr_from = tr_col1.date_input(label="From",value=default_from,key='tr_from')
 tr_to = tr_col2.date_input(label="To",value=default_to,key='tr_to')
 tr_freq = tr_col3.selectbox('Time frame',('Daily', 'Weekly', 'Bi-weekly', 'Monthly'),index=1,key='tr_freq')
+tr_visitor_type = tr_col4.selectbox('Visitor type',('All', 'Hub pilgrims', 'Hub witnesses'),index=0,key='tr_visitor_type')
 tr_yrange = tr_expander.slider("Y-axis range", value=(0, 50), min_value=0, max_value=100, step=5, key='tr_yrange')
 
 date_range_start, date_range_end, date_range_str = get_dates(tr_from,tr_to,tr_freq)
-tr = np.round((trial_users(date_range_str)/visitors(date_range_str))*100,2)
+def tr_visitors(date_range,visitor_type):
+    if visitor_type=='All':
+        visitor_count = visitors(date_range)
+    else:
+        data = get_visitor_funnel(date_range)
+        if visitor_type=='Hub pilgrims':
+            visitor_count = data[:,1]
+        else:
+            visitor_count = data[:,2]
+    return visitor_count
+visitor_count = tr_visitors(date_range_str,tr_visitor_type)
+tr = np.round((trial_users(date_range_str)/visitor_count)*100,2)
 
 fig = go.Figure()
 if tr_freq=='Daily':
@@ -1675,19 +1689,23 @@ else:
 if show_trends:
     if tr_freq=='Daily':
         extra_range_start, extra_range_end, extra_range_str = get_dates(tr_from-pd.Timedelta(days=daily_window_size+1),tr_from,tr_freq)
-        extra_tr = np.round((trial_users(extra_range_str)/visitors(extra_range_str))*100,2)
+        extra_visitor_count = tr_visitors(extra_range_str,tr_visitor_type)
+        extra_tr = np.round((trial_users(extra_range_str)/extra_visitor_count)*100,2)
         tr_trend = moving_average(list(extra_tr)+list(tr),window_size=daily_window_size)[-len(tr):]
     elif tr_freq=='Weekly':
         extra_range_start, extra_range_end, extra_range_str = get_dates(tr_from-pd.Timedelta(days=(weekly_window_size)*8),tr_from,tr_freq)
-        extra_tr = np.round((trial_users(extra_range_str)/visitors(extra_range_str))*100,2)
+        extra_visitor_count = tr_visitors(extra_range_str,tr_visitor_type)
+        extra_tr = np.round((trial_users(extra_range_str)/extra_visitor_count)*100,2)
         tr_trend = moving_average(list(extra_tr)+list(tr),window_size=weekly_window_size)[-len(tr):]
     elif tr_freq=='Bi-weekly':
         extra_range_start, extra_range_end, extra_range_str = get_dates(tr_from-pd.Timedelta(days=(biweekly_window_size)*15),tr_from,tr_freq)
-        extra_tr = np.round((trial_users(extra_range_str)/visitors(extra_range_str))*100,2)
+        extra_visitor_count = tr_visitors(extra_range_str,tr_visitor_type)
+        extra_tr = np.round((trial_users(extra_range_str)/extra_visitor_count)*100,2)
         tr_trend = moving_average(list(extra_tr)+list(tr),window_size=biweekly_window_size)[-len(tr):]
     else:
         extra_range_start, extra_range_end, extra_range_str = get_dates(tr_from-pd.Timedelta(days=(monthly_window_size)*32),tr_from,tr_freq)
-        extra_tr = np.round((trial_users(extra_range_str)/visitors(extra_range_str))*100,2)
+        extra_visitor_count = tr_visitors(extra_range_str,tr_visitor_type)
+        extra_tr = np.round((trial_users(extra_range_str)/extra_visitor_count)*100,2)
         tr_trend = moving_average(list(extra_tr)+list(tr),window_size=monthly_window_size)[-len(tr):]
     fig.add_trace(go.Scatter(x=x, y=tr_trend, name='Trend', line=dict(color='firebrick', dash='dash')))
 
@@ -1716,7 +1734,7 @@ options = [x for x in all_options if x in options]
 
 x = []
 if 'All Visitors' in options or 'Hub Pilgrims' in options or 'Hub Witnesses' in options:
-    visitor_count, pilgrim_count, witness_count = get_visitor_funnel([funnel_from.strftime('%Y-%m-%d'),funnel_to.strftime('%Y-%m-%d')])
+    visitor_count, pilgrim_count, witness_count = get_visitor_funnel([[funnel_from.strftime('%Y-%m-%d'),funnel_to.strftime('%Y-%m-%d')]])[0]
     temp_counts = [visitor_count, pilgrim_count, witness_count]
     for i, option in enumerate(["All Visitors","Hub Pilgrims","Hub Witnesses"]):
         if option in options:
