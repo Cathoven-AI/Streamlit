@@ -1882,7 +1882,7 @@ if include_inactive:
         date = pd.to_datetime(np.array(date_range_str[i]))
         new_user_ids = set(df1[(df1['date_joined'].dt.normalize()>=date[0])&(df1['date_joined'].dt.normalize()<=date[1])]['id'].values)
         new_active_user_counts, new_active_user_ids = active_users([date_range_str[i]],[new_user_ids])
-        raw_numbers.append(len(new_active_user_counts[0]))
+        raw_numbers.append(new_active_user_counts[0])
         l = list(np.round(active_users(date_range_str[i:],[new_user_ids]*len(date_range_str))[0]/new_active_user_counts[0],4)*100)
         data.append(l+[np.nan]*(len(date_range_str)-len(l)))
 else:
