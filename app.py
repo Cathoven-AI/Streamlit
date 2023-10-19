@@ -1867,22 +1867,32 @@ curr_expander.plotly_chart(fig, use_container_width=True)
 
 
 nurr_expander = st.expander("NURR")
-nurr_expander.write("New active user retention rate")
+nurr_expander.write("New user retention rate")
 nurr_col1, nurr_col2, nurr_col3 = nurr_expander.columns(3)
 nurr_freq = nurr_col3.selectbox('Time frame',('Daily','Weekly', 'Bi-weekly', 'Monthly'), index=1, key='nurr_freq')
 nurr_from = nurr_col1.date_input(label="From",value=default_from,key='nurr_from')
+include_inactive = nurr_expander.toggle('Include inactive new users',key='nurr_include_inactive',value=True)
 nurr_to = nurr_col2.date_input(label="To",value=default_to,key='nurr_to')
 date_range_start, date_range_end, date_range_str = get_dates(nurr_from,nurr_to,nurr_freq)
 
 data = []
 raw_numbers = []
-for i in range(len(date_range_str)):
-    date = pd.to_datetime(np.array(date_range_str[i]))
-    new_user_ids = set(df1[(df1['date_joined'].dt.normalize()>=date[0])&(df1['date_joined'].dt.normalize()<=date[1])]['id'].values)
-    new_active_user_counts, new_active_user_ids = active_users([date_range_str[i]],[new_user_ids])
-    raw_numbers.append(new_active_user_counts[0])
-    l = list(np.round(active_users(date_range_str[i:],[new_active_user_ids[0]]*len(date_range_str))[0]/new_active_user_counts[0],4)*100)
-    data.append(l+[np.nan]*(len(date_range_str)-len(l)))
+if include_inactive:
+    for i in range(len(date_range_str)):
+        date = pd.to_datetime(np.array(date_range_str[i]))
+        new_user_ids = set(df1[(df1['date_joined'].dt.normalize()>=date[0])&(df1['date_joined'].dt.normalize()<=date[1])]['id'].values)
+        new_active_user_counts, new_active_user_ids = active_users([date_range_str[i]],[new_user_ids])
+        raw_numbers.append(len(new_active_user_counts[0]))
+        l = list(np.round(active_users(date_range_str[i:],[new_user_ids]*len(date_range_str))[0]/new_active_user_counts[0],4)*100)
+        data.append(l+[np.nan]*(len(date_range_str)-len(l)))
+else:
+    for i in range(len(date_range_str)):
+        date = pd.to_datetime(np.array(date_range_str[i]))
+        new_user_ids = set(df1[(df1['date_joined'].dt.normalize()>=date[0])&(df1['date_joined'].dt.normalize()<=date[1])]['id'].values)
+        new_active_user_counts, new_active_user_ids = active_users([date_range_str[i]],[new_user_ids])
+        raw_numbers.append(new_active_user_counts[0])
+        l = list(np.round(active_users(date_range_str[i:],[new_active_user_ids[0]]*len(date_range_str))[0]/new_active_user_counts[0],4)*100)
+        data.append(l+[np.nan]*(len(date_range_str)-len(l)))
 data = np.array(data)
 
 if nurr_freq=='Daily':
