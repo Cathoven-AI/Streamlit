@@ -349,6 +349,7 @@ def churned_users(dates, churning_threshold=30):
 
 @st.cache_data
 def intent_users(date):
+    st.write(date)
     request = RunReportRequest(
         property=f"properties/294609234",
         dimensions=[Dimension(name="customEvent:event_page")],
@@ -374,6 +375,7 @@ def intent_users(date):
         ),
     )
     response = client.run_report(request)
+    st.write(response)
     return int(response.rows[0].metric_values[0].value)
 
 
