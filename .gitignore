@@ -1,0 +1,3 @@
+generate_code.py
+*.json
+.env
